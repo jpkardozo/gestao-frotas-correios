@@ -10,6 +10,8 @@ app.use(express.urlencoded({ extended: true }));
 
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_KEY = process.env.SUPABASE_KEY;
+const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY || process.env.SUPABASE_KEY;
+
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
 async function buscarDadosPorTipo(tipo) {
@@ -57,7 +59,7 @@ tailwind.config = {
 </head>
 <body class="bg-gray-100 font-sans leading-normal tracking-normal text-gray-800">
 
-<!-- TELA DE AUTENTICAÇÃO (LOGIN / REGISTRO) -->
+<!-- TELA DE AUTENTICAÇÃO (LOGIN / REGISTRO COM SELEÇÃO DE PERFIL) -->
 <div id="auth-container" class="min-h-screen flex items-center justify-center p-4 bg-correiosAzul">
 <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-md border-t-8 border-correiosAmarelo">
 <div class="text-center mb-6">
@@ -76,6 +78,16 @@ tailwind.config = {
 <label class="block text-sm font-semibold text-gray-700">Senha:</label>
 <input type="password" id="auth-senha" required class="mt-1 block w-full border border-gray-300 rounded p-2.5 focus:ring-2 focus:ring-correiosAzul focus:outline-none">
 </div>
+
+<!-- Campo de seleção de perfil visível apenas no cadastro -->
+<div id="div-perfil-cadastro" class="hidden">
+<label class="block text-sm font-semibold text-gray-700">Perfil de Acesso:</label>
+<select id="auth-papel" class="mt-1 block w-full border border-gray-300 rounded p-2.5 bg-gray-50 focus:ring-2 focus:ring-correiosAzul">
+<option value="motorista">Motorista</option>
+<option value="supervisor">Supervisor (Gestor)</option>
+</select>
+</div>
+
 <button type="submit" id="btn-submit-auth" class="w-full bg-correiosAmarelo text-correiosAzul font-bold p-3 rounded shadow hover:bg-correiosAmareloHover transition">Acessar Sistema</button>
 </form>
 
@@ -92,36 +104,33 @@ tailwind.config = {
 <div class="bg-correiosAmarelo text-correiosAzul font-black text-xl py-1.5 px-3 rounded shadow">CORREIOS</div>
 <div>
 <h1 class="text-2xl font-bold">Gestão de Quilometragem e Odômetro</h1>
-<p class="text-blue-200 text-sm mt-0.5">Operador: <span id="user-email-display" class="font-semibold underline"></span></p>
+<p class="text-blue-200 text-sm mt-0.5">Operador: <span id="user-email-display" class="font-semibold underline"></span> | Perfil: <span id="user-role-display" class="bg-correiosAmarelo text-correiosAzul px-2 py-0.5 rounded text-xs font-bold uppercase"></span></p>
 </div>
 </div>
 <button onclick="fazerLogout()" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded font-bold text-sm shadow transition">Encerrar Sessão</button>
 </header>
 
-<!-- Navegação por Abas -->
-<div class="flex flex-wrap gap-2 mb-6 border-b-2 border-gray-300 pb-3">
-<button onclick="mudarAba('tab-viagem')" class="tab-btn bg-correiosAzul text-white px-5 py-2.5 rounded-md font-bold shadow-sm transition">Registrar Viagem</button>
-<button onclick="mudarAba('tab-rotas')" class="tab-btn bg-white text-gray-700 border border-gray-300 px-5 py-2.5 rounded-md font-bold hover:bg-gray-50 transition">Cadastrar Rotas</button>
-<button onclick="mudarAba('tab-cadastros')" class="tab-btn bg-white text-gray-700 border border-gray-300 px-5 py-2.5 rounded-md font-bold hover:bg-gray-50 transition">Veículos/Motoristas</button>
-<button onclick="mudarAba('tab-relatorio')" class="tab-btn bg-white text-gray-700 border border-gray-300 px-5 py-2.5 rounded-md font-bold hover:bg-gray-50 transition">Relatório de Percursos</button>
+<!-- Navegação por Abas (Dinâmica conforme o perfil) -->
+<div id="menu-abas" class="flex flex-wrap gap-2 mb-6 border-b-2 border-gray-300 pb-3">
+<!-- Inserido dinamicamente via JS -->
 </div>
 
-<!-- ABA 1: REGISTRAR VIAGEM -->
+<!-- ABA 1: REGISTRAR VIAGEM (Para Motoristas e Supervisores) -->
 <div id="tab-viagem" class="tab-content bg-white p-6 rounded-lg shadow-md border border-gray-200">
 <h2 class="text-xl font-bold mb-4 text-correiosAzul border-b pb-2">Execução de Rota Planejada</h2>
 <form id="form-viagem" onsubmit="salvarViagem(event)" class="space-y-4">
 <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
 <div>
 <label class="block text-sm font-semibold text-gray-700">Selecione a Rota:</label>
-<select id="v-rota" required onchange="carregarEstruturaRota()" class="mt-1 block w-full border border-gray-300 rounded p-2.5 bg-gray-50 focus:ring-2 focus:ring-correiosAzul focus:outline-none"></select>
+<select id="v-rota" required onchange="carregarEstruturaRota()" class="mt-1 block w-full border border-gray-300 rounded p-2.5 bg-gray-50"></select>
 </div>
 <div>
 <label class="block text-sm font-semibold text-gray-700">Veículo:</label>
-<select id="v-veiculo" required class="mt-1 block w-full border border-gray-300 rounded p-2.5 bg-gray-50 focus:ring-2 focus:ring-correiosAzul focus:outline-none"></select>
+<select id="v-veiculo" required class="mt-1 block w-full border border-gray-300 rounded p-2.5 bg-gray-50"></select>
 </div>
 <div>
 <label class="block text-sm font-semibold text-gray-700">Motorista (CNH):</label>
-<select id="v-motorista" required class="mt-1 block w-full border border-gray-300 rounded p-2.5 bg-gray-50 focus:ring-2 focus:ring-correiosAzul focus:outline-none"></select>
+<select id="v-motorista" required class="mt-1 block w-full border border-gray-300 rounded p-2.5 bg-gray-50"></select>
 </div>
 </div>
 
@@ -164,7 +173,7 @@ tailwind.config = {
 </form>
 </div>
 
-<!-- ABA 2: CADASTRAR ROTAS -->
+<!-- ABA 2: CADASTRAR ROTAS (Exclusivo Supervisor) -->
 <div id="tab-rotas" class="tab-content hidden bg-white p-6 rounded-lg shadow-md border border-gray-200">
 <h2 class="text-xl font-bold mb-4 text-correiosAzul border-b pb-2">Cadastrar Nova Rota Antecipada</h2>
 <form onsubmit="salvarRota(event)" class="space-y-4">
@@ -186,7 +195,7 @@ tailwind.config = {
 <div class="border-t pt-4">
 <div class="flex justify-between items-center mb-2">
 <h3 class="text-lg font-bold text-correiosAzul">Paradas Intermediárias</h3>
-<button type="button" onclick="adicionarParadaRota()" class="bg-correiosAzul text-correiosAmarelo font-bold px-3 py-1.5 text-sm rounded shadow hover:bg-blue-900 transition">+ Adicionar Parada</button>
+<button type="button" onclick="adicionarParadaRota()" class="bg-correiosAzul text-correiosAmarelo font-bold px-3 py-1.5 text-sm rounded shadow">+ Adicionar Parada</button>
 </div>
 <div id="lista-paradas-rota" class="space-y-2"></div>
 </div>
@@ -200,14 +209,14 @@ tailwind.config = {
 </div>
 </div>
 
-<!-- ABA 3: CADASTROS -->
+<!-- ABA 3: CADASTROS (Exclusivo Supervisor) -->
 <div id="tab-cadastros" class="tab-content hidden grid grid-cols-1 md:grid-cols-2 gap-6">
 <div class="bg-white p-6 rounded-lg shadow-md border border-gray-200">
 <h2 class="text-xl font-bold mb-4 text-correiosAzul border-b pb-2">Cadastrar Veículo</h2>
 <form onsubmit="salvarVeiculo(event)" class="space-y-4">
 <div><label class="block text-sm font-semibold text-gray-700">Modelo:</label><input type="text" id="cad-modelo" required class="mt-1 block w-full border border-gray-300 rounded p-2.5"></div>
 <div><label class="block text-sm font-semibold text-gray-700">Placa:</label><input type="text" id="cad-placa" required class="mt-1 block w-full border border-gray-300 rounded p-2.5"></div>
-<button type="submit" class="bg-correiosAmarelo text-correiosAzul font-bold px-4 py-2 rounded shadow hover:bg-correiosAmareloHover transition">Salvar Veículo</button>
+<button type="submit" class="bg-correiosAmarelo text-correiosAzul font-bold px-4 py-2 rounded shadow">Salvar Veículo</button>
 </form>
 <div class="mt-4"><h3 class="font-bold text-correiosAzul mb-2">Veículos:</h3><ul id="ul-veiculos" class="list-disc pl-5 text-sm text-gray-700"></ul></div>
 </div>
@@ -217,7 +226,7 @@ tailwind.config = {
 <form onsubmit="salvarMotorista(event)" class="space-y-4">
 <div><label class="block text-sm font-semibold text-gray-700">Nome:</label><input type="text" id="cad-nome" required class="mt-1 block w-full border border-gray-300 rounded p-2.5"></div>
 <div><label class="block text-sm font-semibold text-gray-700">CNH:</label><input type="text" id="cad-cnh" required class="mt-1 block w-full border border-gray-300 rounded p-2.5"></div>
-<button type="submit" class="bg-correiosAmarelo text-correiosAzul font-bold px-4 py-2 rounded shadow hover:bg-correiosAmareloHover transition">Salvar Motorista</button>
+<button type="submit" class="bg-correiosAmarelo text-correiosAzul font-bold px-4 py-2 rounded shadow">Salvar Motorista</button>
 </form>
 <div class="mt-4"><h3 class="font-bold text-correiosAzul mb-2">Motoristas:</h3><ul id="ul-motoristas" class="list-disc pl-5 text-sm text-gray-700"></ul></div>
 </div>
@@ -230,12 +239,12 @@ tailwind.config = {
 <table class="min-w-full divide-y divide-gray-200 border">
 <thead class="bg-correiosAzul text-white">
 <tr>
-<th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">ID / Rota</th>
-<th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Veículo / Motorista</th>
-<th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Saída / Chegada</th>
-<th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Km Rodados</th>
-<th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Tempo Gasto</th>
-<th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Paradas</th>
+<th class="px-4 py-3 text-left text-xs font-semibold uppercase">ID / Rota</th>
+<th class="px-4 py-3 text-left text-xs font-semibold uppercase">Veículo / Motorista</th>
+<th class="px-4 py-3 text-left text-xs font-semibold uppercase">Saída / Chegada</th>
+<th class="px-4 py-3 text-left text-xs font-semibold uppercase">Km Rodados</th>
+<th class="px-4 py-3 text-left text-xs font-semibold uppercase">Tempo Gasto</th>
+<th class="px-4 py-3 text-left text-xs font-semibold uppercase">Paradas</th>
 </tr>
 </thead>
 <tbody id="tabela-relatorio" class="bg-white divide-y divide-gray-200 text-sm"></tbody>
@@ -245,16 +254,18 @@ tailwind.config = {
 </div>
 
 <script>
-const supabaseClient = supabase.createClient('${SUPABASE_URL}', '${process.env.SUPABASE_KEY}');
+const supabaseClient = supabase.createClient('${SUPABASE_URL}', '${SUPABASE_ANON_KEY}');
 let modoCadastro = false;
 let contadorParadasRota = 0;
 let rotasGlobais = [];
+let usuarioAtualPapel = 'motorista';
 
 function alternarModoAuth() {
     modoCadastro = !modoCadastro;
     document.getElementById('auth-titulo').innerText = modoCadastro ? 'Criar Nova Conta - Correios' : 'Controle de Frota e Percursos';
     document.getElementById('btn-submit-auth').innerText = modoCadastro ? 'Cadastrar Usuário' : 'Acessar Sistema';
     document.getElementById('btn-alternar').innerText = modoCadastro ? 'Já possui conta? Faça login' : 'Não possui conta? Cadastre-se';
+    document.getElementById('div-perfil-cadastro').classList.toggle('hidden', !modoCadastro);
     document.getElementById('auth-erro').classList.add('hidden');
 }
 
@@ -266,11 +277,16 @@ async function processarAuth(e) {
     erroDiv.classList.add('hidden');
 
     if (modoCadastro) {
+        const papel = document.getElementById('auth-papel').value;
         const { data, error } = await supabaseClient.auth.signUp({ email, password: senha });
         if (error) {
             erroDiv.innerText = error.message;
             erroDiv.classList.remove('hidden');
         } else {
+            // Salva o perfil na tabela perfis
+            if(data.user) {
+                await supabaseClient.from('perfis').upsert({ id: data.user.id, email, papel });
+            }
             alert('Cadastro realizado com sucesso! Faça login.');
             alternarModoAuth();
         }
@@ -291,10 +307,35 @@ async function verificarSessao() {
         document.getElementById('auth-container').classList.add('hidden');
         document.getElementById('app-container').classList.remove('hidden');
         document.getElementById('user-email-display').innerText = session.user.email;
+
+        // Busca o papel do usuário na tabela perfis
+        const { data: perfil } = await supabaseClient.from('perfis').select('papel').eq('id', session.user.id).single();
+        usuarioAtualPapel = perfil ? perfil.papel : 'motorista';
+        document.getElementById('user-role-display').innerText = usuarioAtualPapel;
+
+        configurarMenuPorPerfil();
         carregarDadosIniciais();
     } else {
         document.getElementById('auth-container').classList.remove('hidden');
         document.getElementById('app-container').classList.add('hidden');
+    }
+}
+
+function configurarMenuPorPerfil() {
+    const menu = document.getElementById('menu-abas');
+    if (usuarioAtualPapel === 'supervisor') {
+        menu.innerHTML = \`
+        <button onclick="mudarAba('tab-viagem')" class="tab-btn bg-correiosAzul text-white px-5 py-2.5 rounded-md font-bold shadow-sm transition">Registrar Viagem</button>
+        <button onclick="mudarAba('tab-rotas')" class="tab-btn bg-white text-gray-700 border border-gray-300 px-5 py-2.5 rounded-md font-bold hover:bg-gray-50 transition">Cadastrar Rotas</button>
+        <button onclick="mudarAba('tab-cadastros')" class="tab-btn bg-white text-gray-700 border border-gray-300 px-5 py-2.5 rounded-md font-bold hover:bg-gray-50 transition">Veículos/Motoristas</button>
+        <button onclick="mudarAba('tab-relatorio')" class="tab-btn bg-white text-gray-700 border border-gray-300 px-5 py-2.5 rounded-md font-bold hover:bg-gray-50 transition">Relatório</button>
+        \`;
+    } else {
+        // Motorista vê apenas Registrar Viagem e Relatório
+        menu.innerHTML = \`
+        <button onclick="mudarAba('tab-viagem')" class="tab-btn bg-correiosAzul text-white px-5 py-2.5 rounded-md font-bold shadow-sm transition">Registrar Viagem</button>
+        <button onclick="mudarAba('tab-relatorio')" class="tab-btn bg-white text-gray-700 border border-gray-300 px-5 py-2.5 rounded-md font-bold hover:bg-gray-50 transition">Relatório de Percursos</button>
+        \`;
     }
 }
 
@@ -321,12 +362,16 @@ async function carregarDadosIniciais() {
     const resV = await fetch('/api/veiculos');
     const veiculos = await resV.json();
     document.getElementById('v-veiculo').innerHTML = veiculos.map(v => \`<option value="\${v.id}">\${v.modelo} (Placa: \${v.placa})</option>\`).join('');
-    document.getElementById('ul-veiculos').innerHTML = veiculos.map(v => \`<li>\${v.modelo} (\${v.placa})</li>\`).join('');
+    if(document.getElementById('ul-veiculos')) {
+        document.getElementById('ul-veiculos').innerHTML = veiculos.map(v => \`<li>\${v.modelo} (\${v.placa})</li>\`).join('');
+    }
 
     const resM = await fetch('/api/motoristas');
     const motoristas = await resM.json();
     document.getElementById('v-motorista').innerHTML = motoristas.map(m => \`<option value="\${m.id}">\${m.nome} (CNH: \${m.cnh})</option>\`).join('');
-    document.getElementById('ul-motoristas').innerHTML = motoristas.map(m => \`<li>\${m.nome} - CNH: \${m.cnh}</li>\`).join('');
+    if(document.getElementById('ul-motoristas')) {
+        document.getElementById('ul-motoristas').innerHTML = motoristas.map(m => \`<li>\${m.nome} - CNH: \${m.cnh}</li>\`).join('');
+    }
 
     const resR = await fetch('/api/rotas');
     rotasGlobais = await resR.json();
@@ -344,7 +389,7 @@ async function salvarVeiculo(e) {
     document.getElementById('cad-modelo').value = '';
     document.getElementById('cad-placa').value = '';
     carregarDadosIniciais();
-    alert('Veículo cadastrado com sucesso!');
+    alert('Veículo cadastrado!');
 }
 
 async function salvarMotorista(e) {
@@ -357,7 +402,7 @@ async function salvarMotorista(e) {
     document.getElementById('cad-nome').value = '';
     document.getElementById('cad-cnh').value = '';
     carregarDadosIniciais();
-    alert('Motorista cadastrado com sucesso!');
+    alert('Motorista cadastrado!');
 }
 
 function adicionarParadaRota() {
@@ -393,13 +438,14 @@ async function salvarRota(e) {
     document.getElementById('r-destino').value = '';
     document.getElementById('lista-paradas-rota').innerHTML = '';
     carregarRotasNaTela();
-    alert('Rota salva com sucesso!');
+    alert('Rota salva!');
 }
 
 async function carregarRotasNaTela() {
     const res = await fetch('/api/rotas');
     const rotas = await res.json();
     const container = document.getElementById('ul-rotas');
+    if(!container) return;
     if(rotas.length === 0) {
         container.innerHTML = '<p class="text-gray-400 italic">Nenhuma rota cadastrada.</p>';
         return;
@@ -472,7 +518,7 @@ async function salvarViagem(e) {
         body: JSON.stringify({ rotaId, veiculoId, motoristaId, odometroInicial, horaSaida, odometroFinal, horaChegada, paradas: paradasExecutadas })
     });
 
-    alert('Execução de viagem salva com sucesso!');
+    alert('Viagem salva com sucesso!');
     document.getElementById('form-viagem').reset();
     document.getElementById('container-paradas-execucao').innerHTML = '<p class="text-sm text-gray-500 italic">Selecione uma rota acima.</p>';
 }
@@ -481,6 +527,7 @@ async function carregarRelatorio() {
     const res = await fetch('/api/viagens');
     const viagensList = await res.json();
     const tbody = document.getElementById('tabela-relatorio');
+    if(!tbody) return;
 
     if(viagensList.length === 0) {
         tbody.innerHTML = '<tr><td colspan="6" class="px-4 py-4 text-center text-gray-500">Nenhuma viagem registrada.</td></tr>';
@@ -575,5 +622,5 @@ app.post('/api/viagens', async (req, res) => {
 });
 
 app.listen(PORT, () => {
-    console.log(`Sistema com Identidade Visual dos Correios rodando em http://localhost:${PORT}`);
+    console.log(`Sistema com Perfis Correios rodando em http://localhost:${PORT}`);
 });
