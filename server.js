@@ -57,8 +57,10 @@ tailwind.config = {
 </script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
-<body class="bg-gray-100 font-sans leading-normal tracking-normal text-gray-800">
+<body class="bg-gray-100 font-sans leading-normal tracking-normal text-gray-800 min-h-screen flex flex-col justify-between">
 
+<!-- WRAPPER PRINCIPAL -->
+<div>
 <!-- TELA DE AUTENTICAÇÃO -->
 <div id="auth-container" class="min-h-screen flex items-center justify-center p-4 bg-correiosAzul">
 <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-md border-t-8 border-correiosAmarelo">
@@ -279,6 +281,25 @@ tailwind.config = {
 </div>
 </div>
 </div>
+</div>
+
+<!-- RODAPÉ INSTITUCIONAL COM SUAS INFORMAÇÕES -->
+<footer class="bg-correiosAzul text-white py-6 mt-12 border-t-4 border-correiosAmarelo">
+<div class="container mx-auto px-4 text-center space-y-2">
+<p class="text-sm font-medium">
+Desenvolvido com dedicação por <span class="font-bold text-correiosAmarelo">João Paulo Cardoso</span>
+</p>
+<p class="text-xs text-blue-200">
+Conheça o portal open-source:
+<a href="https://linuxcriativo.com.br" target="_blank" class="text-correiosAmarelo font-bold underline hover:text-white transition">Linux Criativo</a>
+</p>
+<div class="flex justify-center space-x-4 pt-2 text-xs text-gray-300">
+<a href="https://github.com/jpkardozo" target="_blank" class="hover:text-correiosAmarelo transition font-semibold">GitHub</a>
+<span>•</span>
+<a href="https://linuxcriativo.com.br" target="_blank" class="hover:text-correiosAmarelo transition font-semibold">Site Oficial</a>
+</div>
+</div>
+</footer>
 
 <script>
 const supabaseClient = supabase.createClient('${SUPABASE_URL}', '${SUPABASE_ANON_KEY}');
@@ -719,5 +740,5 @@ app.post('/api/viagens', async (req, res) => {
 });
 
 app.listen(PORT, () => {
-    console.log(`Sistema Correios com Atribuição rodando em http://localhost:${PORT}`);
+    console.log(`Sistema Correios rodando com rodapé em http://localhost:${PORT}`);
 });
