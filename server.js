@@ -56,6 +56,27 @@ tailwind.config = {
 }
 </script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+@media print {
+    body * {
+        visibility: hidden;
+    }
+    #tab-relatorio, #tab-relatorio * {
+    visibility: visible;
+    }
+    #tab-relatorio {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    box-shadow: none;
+    border: none;
+    }
+    button {
+        display: none !important;
+    }
+}
+</style>
 </head>
 <body class="bg-gray-100 font-sans leading-normal tracking-normal text-gray-800 min-h-screen flex flex-col justify-between">
 
@@ -261,9 +282,14 @@ tailwind.config = {
 </div>
 </div>
 
-<!-- ABA 4: RELATÓRIO -->
+<!-- ABA 4: RELATÓRIO COM BOTÃO DE PDF -->
 <div id="tab-relatorio" class="tab-content hidden bg-white p-6 rounded-lg shadow-md border border-gray-200">
-<h2 class="text-xl font-bold mb-4 text-correiosAzul border-b pb-2">Relatório de Viagens e Percursos</h2>
+<div class="flex flex-col md:flex-row justify-between items-center mb-4 border-b pb-2 gap-4">
+<h2 class="text-xl font-bold text-correiosAzul">Relatório de Viagens e Percursos</h2>
+<button onclick="gerarPDFRelatorio()" class="bg-correiosAzul text-correiosAmarelo font-bold px-4 py-2 rounded shadow hover:bg-correiosAzulEscuro transition flex items-center gap-2">
+🖨️ Imprimir / Salvar PDF
+</button>
+</div>
 <div class="overflow-x-auto">
 <table class="min-w-full divide-y divide-gray-200 border">
 <thead class="bg-correiosAzul text-white">
@@ -283,7 +309,7 @@ tailwind.config = {
 </div>
 </div>
 
-<!-- RODAPÉ INSTITUCIONAL COM SUAS INFORMAÇÕES -->
+<!-- RODAPÉ INSTITUCIONAL -->
 <footer class="bg-correiosAzul text-white py-6 mt-12 border-t-4 border-correiosAmarelo">
 <div class="container mx-auto px-4 text-center space-y-2">
 <p class="text-sm font-medium">
@@ -667,6 +693,10 @@ async function carregarRelatorio() {
     }).join('');
 }
 
+function gerarPDFRelatorio() {
+    window.print();
+}
+
 window.onload = verificarSessao;
 </script>
 </body>
@@ -740,5 +770,5 @@ app.post('/api/viagens', async (req, res) => {
 });
 
 app.listen(PORT, () => {
-    console.log(`Sistema Correios rodando com rodapé em http://localhost:${PORT}`);
+    console.log(`Sistema Correios rodando com Impressão de PDF e Rodapé em http://localhost:${PORT}`);
 });
