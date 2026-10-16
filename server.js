@@ -59,7 +59,7 @@ tailwind.config = {
 </head>
 <body class="bg-gray-100 font-sans leading-normal tracking-normal text-gray-800">
 
-<!-- TELA DE AUTENTICAÇÃO (LOGIN / REGISTRO COM SELEÇÃO DE PERFIL) -->
+<!-- TELA DE AUTENTICAÇÃO -->
 <div id="auth-container" class="min-h-screen flex items-center justify-center p-4 bg-correiosAzul">
 <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-md border-t-8 border-correiosAmarelo">
 <div class="text-center mb-6">
@@ -79,7 +79,6 @@ tailwind.config = {
 <input type="password" id="auth-senha" required class="mt-1 block w-full border border-gray-300 rounded p-2.5 focus:ring-2 focus:ring-correiosAzul focus:outline-none">
 </div>
 
-<!-- Campo de seleção de perfil visível apenas no cadastro -->
 <div id="div-perfil-cadastro" class="hidden">
 <label class="block text-sm font-semibold text-gray-700">Perfil de Acesso:</label>
 <select id="auth-papel" class="mt-1 block w-full border border-gray-300 rounded p-2.5 bg-gray-50 focus:ring-2 focus:ring-correiosAzul">
@@ -110,26 +109,24 @@ tailwind.config = {
 <button onclick="fazerLogout()" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded font-bold text-sm shadow transition">Encerrar Sessão</button>
 </header>
 
-<!-- Navegação por Abas (Dinâmica conforme o perfil) -->
-<div id="menu-abas" class="flex flex-wrap gap-2 mb-6 border-b-2 border-gray-300 pb-3">
-<!-- Inserido dinamicamente via JS -->
-</div>
+<!-- Menu de Abas Dinâmico -->
+<div id="menu-abas" class="flex flex-wrap gap-2 mb-6 border-b-2 border-gray-300 pb-3"></div>
 
-<!-- ABA 1: REGISTRAR VIAGEM (Para Motoristas e Supervisores) -->
+<!-- ABA 1: EXECUTAR VIAGEM ATRIBUÍDA -->
 <div id="tab-viagem" class="tab-content bg-white p-6 rounded-lg shadow-md border border-gray-200">
-<h2 class="text-xl font-bold mb-4 text-correiosAzul border-b pb-2">Execução de Rota Planejada</h2>
+<h2 class="text-xl font-bold mb-4 text-correiosAzul border-b pb-2">Minha Rota e Veículo Designados</h2>
 <form id="form-viagem" onsubmit="salvarViagem(event)" class="space-y-4">
 <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
 <div>
-<label class="block text-sm font-semibold text-gray-700">Selecione a Rota:</label>
+<label class="block text-sm font-semibold text-gray-700">Rota Designada:</label>
 <select id="v-rota" required onchange="carregarEstruturaRota()" class="mt-1 block w-full border border-gray-300 rounded p-2.5 bg-gray-50"></select>
 </div>
 <div>
-<label class="block text-sm font-semibold text-gray-700">Veículo:</label>
+<label class="block text-sm font-semibold text-gray-700">Veículo Designado:</label>
 <select id="v-veiculo" required class="mt-1 block w-full border border-gray-300 rounded p-2.5 bg-gray-50"></select>
 </div>
 <div>
-<label class="block text-sm font-semibold text-gray-700">Motorista (CNH):</label>
+<label class="block text-sm font-semibold text-gray-700">Motorista Responsável:</label>
 <select id="v-motorista" required class="mt-1 block w-full border border-gray-300 rounded p-2.5 bg-gray-50"></select>
 </div>
 </div>
@@ -169,11 +166,11 @@ tailwind.config = {
 </div>
 </div>
 
-<button type="submit" class="w-full bg-correiosAmarelo text-correiosAzul font-bold p-3 rounded shadow hover:bg-correiosAmareloHover transition mt-6 text-base">Salvar Execução da Viagem</button>
+<button type="submit" class="w-full bg-correiosAmarelo text-correiosAzul font-bold p-3 rounded shadow hover:bg-correiosAmareloHover transition mt-6 text-base">Registrar Execução da Viagem</button>
 </form>
 </div>
 
-<!-- ABA 2: CADASTRAR ROTAS (Exclusivo Supervisor) -->
+<!-- ABA 2: CADASTRAR ROTAS (Supervisor) -->
 <div id="tab-rotas" class="tab-content hidden bg-white p-6 rounded-lg shadow-md border border-gray-200">
 <h2 class="text-xl font-bold mb-4 text-correiosAzul border-b pb-2">Cadastrar Nova Rota Antecipada</h2>
 <form onsubmit="salvarRota(event)" class="space-y-4">
@@ -209,8 +206,9 @@ tailwind.config = {
 </div>
 </div>
 
-<!-- ABA 3: CADASTROS (Exclusivo Supervisor) -->
-<div id="tab-cadastros" class="tab-content hidden grid grid-cols-1 md:grid-cols-2 gap-6">
+<!-- ABA 3: GESTÃO DE FROTA E ATRIBUIÇÃO (Supervisor) -->
+<div id="tab-cadastros" class="tab-content hidden space-y-6">
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
 <div class="bg-white p-6 rounded-lg shadow-md border border-gray-200">
 <h2 class="text-xl font-bold mb-4 text-correiosAzul border-b pb-2">Cadastrar Veículo</h2>
 <form onsubmit="salvarVeiculo(event)" class="space-y-4">
@@ -229,6 +227,35 @@ tailwind.config = {
 <button type="submit" class="bg-correiosAmarelo text-correiosAzul font-bold px-4 py-2 rounded shadow">Salvar Motorista</button>
 </form>
 <div class="mt-4"><h3 class="font-bold text-correiosAzul mb-2">Motoristas:</h3><ul id="ul-motoristas" class="list-disc pl-5 text-sm text-gray-700"></ul></div>
+</div>
+</div>
+
+<div class="bg-white p-6 rounded-lg shadow-md border border-gray-200 border-l-8 border-l-correiosAzul">
+<h2 class="text-xl font-bold mb-2 text-correiosAzul">Atribuir Rota e Veículo ao Motorista</h2>
+<p class="text-sm text-gray-600 mb-4">Defina aqui qual veículo e qual rota cada motorista está autorizado a operar.</p>
+
+<form onsubmit="salvarAtribuicao(event)" class="space-y-4">
+<div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+<div>
+<label class="block text-sm font-semibold text-gray-700">Motorista:</label>
+<select id="atrib-motorista" required class="mt-1 block w-full border border-gray-300 rounded p-2.5 bg-gray-50"></select>
+</div>
+<div>
+<label class="block text-sm font-semibold text-gray-700">Veículo Destinado:</label>
+<select id="atrib-veiculo" required class="mt-1 block w-full border border-gray-300 rounded p-2.5 bg-gray-50"></select>
+</div>
+<div>
+<label class="block text-sm font-semibold text-gray-700">Rota Destinada:</label>
+<select id="atrib-rota" required class="mt-1 block w-full border border-gray-300 rounded p-2.5 bg-gray-50"></select>
+</div>
+</div>
+<button type="submit" class="bg-correiosAmarelo text-correiosAzul font-bold px-6 py-2.5 rounded shadow hover:bg-correiosAmareloHover transition">Salvar Atribuição</button>
+</form>
+
+<div class="mt-6 border-t pt-4">
+<h3 class="font-bold text-correiosAzul mb-2">Escalas / Atribuições Ativas:</h3>
+<div id="ul-atribuicoes" class="space-y-2 text-sm text-gray-700"></div>
+</div>
 </div>
 </div>
 
@@ -258,7 +285,11 @@ const supabaseClient = supabase.createClient('${SUPABASE_URL}', '${SUPABASE_ANON
 let modoCadastro = false;
 let contadorParadasRota = 0;
 let rotasGlobais = [];
+let veiculosGlobais = [];
+let motoristasGlobais = [];
+let atribuicoesGlobais = [];
 let usuarioAtualPapel = 'motorista';
+let usuarioEmailAtual = '';
 
 function alternarModoAuth() {
     modoCadastro = !modoCadastro;
@@ -283,7 +314,6 @@ async function processarAuth(e) {
             erroDiv.innerText = error.message;
             erroDiv.classList.remove('hidden');
         } else {
-            // Salva o perfil na tabela perfis
             if(data.user) {
                 await supabaseClient.from('perfis').upsert({ id: data.user.id, email, papel });
             }
@@ -306,11 +336,20 @@ async function verificarSessao() {
     if (session) {
         document.getElementById('auth-container').classList.add('hidden');
         document.getElementById('app-container').classList.remove('hidden');
-        document.getElementById('user-email-display').innerText = session.user.email;
+        usuarioEmailAtual = session.user.email;
+        document.getElementById('user-email-display').innerText = usuarioEmailAtual;
 
-        // Busca o papel do usuário na tabela perfis
-        const { data: perfil } = await supabaseClient.from('perfis').select('papel').eq('id', session.user.id).single();
-        usuarioAtualPapel = perfil ? perfil.papel : 'motorista';
+        if (usuarioEmailAtual.toLowerCase() === 'linuxcriativo@gmail.com') {
+            usuarioAtualPapel = 'supervisor';
+        } else {
+            const { data: perfil } = await supabaseClient
+            .from('perfis')
+            .select('papel')
+            .eq('id', session.user.id)
+            .single();
+            usuarioAtualPapel = perfil ? perfil.papel : 'motorista';
+        }
+
         document.getElementById('user-role-display').innerText = usuarioAtualPapel;
 
         configurarMenuPorPerfil();
@@ -324,18 +363,13 @@ async function verificarSessao() {
 function configurarMenuPorPerfil() {
     const menu = document.getElementById('menu-abas');
     if (usuarioAtualPapel === 'supervisor') {
-        menu.innerHTML = \`
-        <button onclick="mudarAba('tab-viagem')" class="tab-btn bg-correiosAzul text-white px-5 py-2.5 rounded-md font-bold shadow-sm transition">Registrar Viagem</button>
-        <button onclick="mudarAba('tab-rotas')" class="tab-btn bg-white text-gray-700 border border-gray-300 px-5 py-2.5 rounded-md font-bold hover:bg-gray-50 transition">Cadastrar Rotas</button>
-        <button onclick="mudarAba('tab-cadastros')" class="tab-btn bg-white text-gray-700 border border-gray-300 px-5 py-2.5 rounded-md font-bold hover:bg-gray-50 transition">Veículos/Motoristas</button>
-        <button onclick="mudarAba('tab-relatorio')" class="tab-btn bg-white text-gray-700 border border-gray-300 px-5 py-2.5 rounded-md font-bold hover:bg-gray-50 transition">Relatório</button>
-        \`;
+        menu.innerHTML = '<button onclick="mudarAba(\\'tab-viagem\\')" class="tab-btn bg-correiosAzul text-white px-5 py-2.5 rounded-md font-bold shadow-sm transition">Executar Viagem</button>' +
+        '<button onclick="mudarAba(\\'tab-rotas\\')" class="tab-btn bg-white text-gray-700 border border-gray-300 px-5 py-2.5 rounded-md font-bold hover:bg-gray-50 transition">Cadastrar Rotas</button>' +
+        '<button onclick="mudarAba(\\'tab-cadastros\\')" class="tab-btn bg-white text-gray-700 border border-gray-300 px-5 py-2.5 rounded-md font-bold hover:bg-gray-50 transition">Frota e Atribuições</button>' +
+        '<button onclick="mudarAba(\\'tab-relatorio\\')" class="tab-btn bg-white text-gray-700 border border-gray-300 px-5 py-2.5 rounded-md font-bold hover:bg-gray-50 transition">Relatório</button>';
     } else {
-        // Motorista vê apenas Registrar Viagem e Relatório
-        menu.innerHTML = \`
-        <button onclick="mudarAba('tab-viagem')" class="tab-btn bg-correiosAzul text-white px-5 py-2.5 rounded-md font-bold shadow-sm transition">Registrar Viagem</button>
-        <button onclick="mudarAba('tab-relatorio')" class="tab-btn bg-white text-gray-700 border border-gray-300 px-5 py-2.5 rounded-md font-bold hover:bg-gray-50 transition">Relatório de Percursos</button>
-        \`;
+        menu.innerHTML = '<button onclick="mudarAba(\\'tab-viagem\\')" class="tab-btn bg-correiosAzul text-white px-5 py-2.5 rounded-md font-bold shadow-sm transition">Minha Rota Atribuída</button>' +
+        '<button onclick="mudarAba(\\'tab-relatorio\\')" class="tab-btn bg-white text-gray-700 border border-gray-300 px-5 py-2.5 rounded-md font-bold hover:bg-gray-50 transition">Relatório de Percursos</button>';
     }
 }
 
@@ -360,23 +394,59 @@ function mudarAba(abaId) {
 
 async function carregarDadosIniciais() {
     const resV = await fetch('/api/veiculos');
-    const veiculos = await resV.json();
-    document.getElementById('v-veiculo').innerHTML = veiculos.map(v => \`<option value="\${v.id}">\${v.modelo} (Placa: \${v.placa})</option>\`).join('');
-    if(document.getElementById('ul-veiculos')) {
-        document.getElementById('ul-veiculos').innerHTML = veiculos.map(v => \`<li>\${v.modelo} (\${v.placa})</li>\`).join('');
-    }
+    veiculosGlobais = await resV.json();
 
     const resM = await fetch('/api/motoristas');
-    const motoristas = await resM.json();
-    document.getElementById('v-motorista').innerHTML = motoristas.map(m => \`<option value="\${m.id}">\${m.nome} (CNH: \${m.cnh})</option>\`).join('');
-    if(document.getElementById('ul-motoristas')) {
-        document.getElementById('ul-motoristas').innerHTML = motoristas.map(m => \`<li>\${m.nome} - CNH: \${m.cnh}</li>\`).join('');
-    }
+    motoristasGlobais = await resM.json();
 
     const resR = await fetch('/api/rotas');
     rotasGlobais = await resR.json();
+
+    const resA = await fetch('/api/atribuicoes');
+    atribuicoesGlobais = await resA.json();
+
+    if(document.getElementById('ul-veiculos')) {
+        document.getElementById('ul-veiculos').innerHTML = veiculosGlobais.map(v => '<li>' + v.modelo + ' (' + v.placa + ')</li>').join('');
+    }
+    if(document.getElementById('ul-motoristas')) {
+        document.getElementById('ul-motoristas').innerHTML = motoristasGlobais.map(m => '<li>' + m.nome + ' - CNH: ' + m.cnh + '</li>').join('');
+    }
+    carregarAtribuicoesNaTela();
+
     const selectRota = document.getElementById('v-rota');
-    selectRota.innerHTML = '<option value="">Selecione uma rota planejada...</option>' + rotasGlobais.map(r => \`<option value="\${r.id}">\${r.nome} (\${r.origem} ➔ \${r.destino})</option>\`).join('');
+    const selectVeiculo = document.getElementById('v-veiculo');
+    const selectMotorista = document.getElementById('v-motorista');
+
+    if (usuarioAtualPapel === 'supervisor') {
+        selectRota.innerHTML = '<option value="">Selecione uma rota...</option>' + rotasGlobais.map(r => '<option value="' + r.id + '">' + r.nome + ' (' + r.origem + ' ➔ ' + r.destino + ')</option>').join('');
+        selectVeiculo.innerHTML = '<option value="">Selecione um veículo...</option>' + veiculosGlobais.map(v => '<option value="' + v.id + '">' + v.modelo + ' (Placa: ' + v.placa + ')</option>').join('');
+        selectMotorista.innerHTML = '<option value="">Selecione um motorista...</option>' + motoristasGlobais.map(m => '<option value="' + m.id + '">' + m.nome + ' (CNH: ' + m.cnh + ')</option>').join('');
+    } else {
+        const motoristaVinculado = motoristasGlobais.find(m => m.email && m.email.toLowerCase() === usuarioEmailAtual.toLowerCase()) || motoristasGlobais[0];
+
+        if (!motoristaVinculado) {
+            selectRota.innerHTML = '<option value="">Sem rota atribuída</option>';
+            selectVeiculo.innerHTML = '<option value="">Sem veículo atribuído</option>';
+            selectMotorista.innerHTML = '<option value="">Motorista não localizado</option>';
+            return;
+        }
+
+        selectMotorista.innerHTML = '<option value="' + motoristaVinculado.id + '">' + motoristaVinculado.nome + ' (CNH: ' + motoristaVinculado.cnh + ')</option>';
+        selectMotorista.disabled = true;
+
+        const atribuicoesDesteMotorista = atribuicoesGlobais.filter(a => a.motoristaId == motoristaVinculado.id);
+
+        if (atribuicoesDesteMotorista.length === 0) {
+            selectRota.innerHTML = '<option value="">Nenhuma rota atribuída pelo supervisor</option>';
+            selectVeiculo.innerHTML = '<option value="">Nenhum veículo atribuído</option>';
+        } else {
+            const rotasDoMotorista = rotasGlobais.filter(r => atribuicoesDesteMotorista.some(a => a.rotaId == r.id));
+            const veiculosDoMotorista = veiculosGlobais.filter(v => atribuicoesDesteMotorista.some(a => a.veiculoId == v.id));
+
+            selectRota.innerHTML = '<option value="">Selecione sua rota designada...</option>' + rotasDoMotorista.map(r => '<option value="' + r.id + '">' + r.nome + ' (' + r.origem + ' ➔ ' + r.destino + ')</option>').join('');
+            selectVeiculo.innerHTML = '<option value="">Selecione seu veículo...</option>' + veiculosDoMotorista.map(v => '<option value="' + v.id + '">' + v.modelo + ' (Placa: ' + v.placa + ')</option>').join('');
+        }
+    }
 }
 
 async function salvarVeiculo(e) {
@@ -397,7 +467,11 @@ async function salvarMotorista(e) {
     await fetch('/api/motoristas', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({nome: document.getElementById('cad-nome').value, cnh: document.getElementById('cad-cnh').value})
+        body: JSON.stringify({
+            nome: document.getElementById('cad-nome').value,
+                             cnh: document.getElementById('cad-cnh').value,
+                             email: usuarioEmailAtual
+        })
     });
     document.getElementById('cad-nome').value = '';
     document.getElementById('cad-cnh').value = '';
@@ -405,15 +479,63 @@ async function salvarMotorista(e) {
     alert('Motorista cadastrado!');
 }
 
+async function salvarAtribuicao(e) {
+    e.preventDefault();
+    const motoristaId = document.getElementById('atrib-motorista').value;
+    const veiculoId = document.getElementById('atrib-veiculo').value;
+    const rotaId = document.getElementById('atrib-rota').value;
+
+    await fetch('/api/atribuicoes', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ motoristaId, veiculoId, rotaId })
+    });
+
+    carregarAtribuicoesNaTela();
+    alert('Atribuição salva com sucesso!');
+}
+
+async function carregarAtribuicoesNaTela() {
+    const resM = await fetch('/api/motoristas');
+    const mols = await resM.json();
+    const selectM = document.getElementById('atrib-motorista');
+    if(selectM) selectM.innerHTML = '<option value="">Selecione o motorista...</option>' + mols.map(m => '<option value="' + m.id + '">' + m.nome + '</option>').join('');
+
+    const resV = await fetch('/api/veiculos');
+    const veics = await resV.json();
+    const selectV = document.getElementById('atrib-veiculo');
+    if(selectV) selectV.innerHTML = '<option value="">Selecione o veículo...</option>' + veics.map(v => '<option value="' + v.id + '">' + v.modelo + ' (' + v.placa + ')</option>').join('');
+
+    const resR = await fetch('/api/rotas');
+    const rots = await resR.json();
+    const selectR = document.getElementById('atrib-rota');
+    if(selectR) selectR.innerHTML = '<option value="">Selecione a rota...</option>' + rots.map(r => '<option value="' + r.id + '">' + r.nome + '</option>').join('');
+
+    const resA = await fetch('/api/atribuicoes');
+    const atribs = await resA.json();
+    const container = document.getElementById('ul-atribuicoes');
+    if(!container) return;
+
+    if(atribs.length === 0) {
+        container.innerHTML = '<p class="text-gray-400 italic">Nenhuma atribuição de rota/veículo cadastrada.</p>';
+        return;
+    }
+
+    container.innerHTML = atribs.map(a => {
+        const mol = mols.find(m => m.id == a.motoristaId) || {};
+        const vei = veics.find(v => v.id == a.veiculoId) || {};
+        const rot = rots.find(r => r.id == a.rotaId) || {};
+        return '<div class="p-2 border rounded bg-gray-50 flex justify-between items-center"><div><b>Motorista:</b> ' + (mol.nome || '---') + ' | <b>Veículo:</b> ' + (vei.modelo || '---') + ' | <b>Rota:</b> ' + (rot.nome || '---') + '</div></div>';
+    }).join('');
+}
+
 function adicionarParadaRota() {
     contadorParadasRota++;
     const div = document.createElement('div');
     div.className = "flex gap-2 items-center parada-rota-item bg-gray-50 p-2 rounded border";
-    div.innerHTML = \`
-    <span class="text-xs font-bold text-gray-600">Parada #\${contadorParadasRota}</span>
-    <input type="text" name="localParada" placeholder="Nome do Local" required class="flex-1 border border-gray-300 rounded p-1.5 text-sm">
-    <button type="button" onclick="this.parentElement.remove()" class="text-red-600 font-bold px-2">X</button>
-    \`;
+    div.innerHTML = '<span class="text-xs font-bold text-gray-600">Parada #' + contadorParadasRota + '</span>' +
+    '<input type="text" name="localParada" placeholder="Nome do Local" required class="flex-1 border border-gray-300 rounded p-1.5 text-sm">' +
+    '<button type="button" onclick="this.parentElement.remove()" class="text-red-600 font-bold px-2">X</button>';
     document.getElementById('lista-paradas-rota').appendChild(div);
 }
 
@@ -450,12 +572,7 @@ async function carregarRotasNaTela() {
         container.innerHTML = '<p class="text-gray-400 italic">Nenhuma rota cadastrada.</p>';
         return;
     }
-    container.innerHTML = rotas.map(r => \`
-    <div class="p-3 border rounded bg-gray-50 border-l-4 border-l-correiosAmarelo">
-    <b>\${r.nome}</b> ➔ Saída: \${r.origem} | Destino: \${r.destino}<br>
-    <span class="text-xs text-gray-500">Paradas: \${r.paradas.length > 0 ? r.paradas.join(' ➔ ') : 'Nenhuma'}</span>
-    </div>
-    \`).join('');
+    container.innerHTML = rotas.map(r => '<div class="p-3 border rounded bg-gray-50 border-l-4 border-l-correiosAmarelo"><b>' + r.nome + '</b> ➔ Saída: ' + r.origem + ' | Destino: ' + r.destino + '<br><span class="text-xs text-gray-500">Paradas: ' + (r.paradas.length > 0 ? r.paradas.join(' ➔ ') : 'Nenhuma') + '</span></div>').join('');
 }
 
 function carregarEstruturaRota() {
@@ -476,19 +593,7 @@ function carregarEstruturaRota() {
         return;
     }
 
-    container.innerHTML = rota.paradas.map((local, idx) => \`
-    <div class="p-4 border rounded-md bg-gray-50 space-y-3 parada-execucao-item border-l-4 border-l-correiosAzul" data-local="\${local}">
-    <h4 class="font-bold text-correiosAzul">Parada #\${idx+1}: \${local}</h4>
-    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-    <div><label class="block text-xs font-semibold text-gray-700">Hora Chegada:</label><input type="datetime-local" name="horaChegada" required class="mt-1 block w-full border border-gray-300 rounded p-1.5 text-sm bg-white"></div>
-    <div><label class="block text-xs font-semibold text-gray-700">Hodômetro Chegada (km):</label><input type="number" name="odoChegada" required class="mt-1 block w-full border border-gray-300 rounded p-1.5 text-sm bg-white"></div>
-    </div>
-    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-    <div><label class="block text-xs font-semibold text-gray-700">Hora Saída:</label><input type="datetime-local" name="horaSaida" required class="mt-1 block w-full border border-gray-300 rounded p-1.5 text-sm bg-white"></div>
-    <div><label class="block text-xs font-semibold text-gray-700">Hodômetro Saída (km):</label><input type="number" name="odoSaida" required class="mt-1 block w-full border border-gray-300 rounded p-1.5 text-sm bg-white"></div>
-    </div>
-    </div>
-    \`).join('');
+    container.innerHTML = rota.paradas.map((local, idx) => '<div class="p-4 border rounded-md bg-gray-50 space-y-3 parada-execucao-item border-l-4 border-l-correiosAzul" data-local="' + local + '"><h4 class="font-bold text-correiosAzul">Parada #' + (idx+1) + ': ' + local + '</h4><div class="grid grid-cols-1 sm:grid-cols-2 gap-3"><div><label class="block text-xs font-semibold text-gray-700">Hora Chegada:</label><input type="datetime-local" name="horaChegada" required class="mt-1 block w-full border border-gray-300 rounded p-1.5 text-sm bg-white"></div><div><label class="block text-xs font-semibold text-gray-700">Hodômetro Chegada (km):</label><input type="number" name="odoChegada" required class="mt-1 block w-full border border-gray-300 rounded p-1.5 text-sm bg-white"></div></div><div class="grid grid-cols-1 sm:grid-cols-2 gap-3"><div><label class="block text-xs font-semibold text-gray-700">Hora Saída:</label><input type="datetime-local" name="horaSaida" required class="mt-1 block w-full border border-gray-300 rounded p-1.5 text-sm bg-white"></div><div><label class="block text-xs font-semibold text-gray-700">Hodômetro Saída (km):</label><input type="number" name="odoSaida" required class="mt-1 block w-full border border-gray-300 rounded p-1.5 text-sm bg-white"></div></div></div>').join('');
 }
 
 async function salvarViagem(e) {
@@ -518,7 +623,7 @@ async function salvarViagem(e) {
         body: JSON.stringify({ rotaId, veiculoId, motoristaId, odometroInicial, horaSaida, odometroFinal, horaChegada, paradas: paradasExecutadas })
     });
 
-    alert('Viagem salva com sucesso!');
+    alert('Execução de viagem registrada com sucesso!');
     document.getElementById('form-viagem').reset();
     document.getElementById('container-paradas-execucao').innerHTML = '<p class="text-sm text-gray-500 italic">Selecione uma rota acima.</p>';
 }
@@ -535,24 +640,9 @@ async function carregarRelatorio() {
     }
 
     tbody.innerHTML = viagensList.map(v => {
-        let htmlParadas = v.paradas.length > 0 ? v.paradas.map((p, idx) => \`
-        <div class="text-xs bg-gray-50 p-1.5 rounded mb-1 border">
-        <b>#\${idx+1} - \${p.local}</b><br>
-        Chegada: \${new Date(p.horaChegada).toLocaleString()} (\${p.odoChegada} km)<br>
-        Saída: \${new Date(p.horaSaida).toLocaleString()} (\${p.odoSaida} km)
-        </div>
-        \`).join('') : '<span class="text-gray-400">Sem paradas</span>';
+        let htmlParadas = v.paradas.length > 0 ? v.paradas.map((p, idx) => '<div class="text-xs bg-gray-50 p-1.5 rounded mb-1 border"><b>#' + (idx+1) + ' - ' + p.local + '</b><br>Chegada: ' + new Date(p.horaChegada).toLocaleString() + ' (' + p.odoChegada + ' km)<br>Saída: ' + new Date(p.horaSaida).toLocaleString() + ' (' + p.odoSaida + ' km)</div>').join('') : '<span class="text-gray-400">Sem paradas</span>';
 
-        return \`
-        <tr class="hover:bg-gray-50">
-        <td class="px-4 py-3 font-semibold text-gray-900">\${v.rotaNome}<br><span class="text-xs text-gray-500">\${new Date(v.horaSaida).toLocaleDateString()}</span></td>
-        <td class="px-4 py-3"><b>\${v.veiculoModelo}</b> (\${v.veiculoPlaca})<br><span class="text-xs text-gray-600">\${v.motoristaNome}</span></td>
-        <td class="px-4 py-3 text-xs">Saída: \${new Date(v.horaSaida).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}<br>Chegada: \${new Date(v.horaChegada).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</td>
-        <td class="px-4 py-3 font-bold text-correiosAzul">\${v.kmRodados} km</td>
-        <td class="px-4 py-3 text-gray-700">\${v.tempoGasto}</td>
-        <td class="px-4 py-3">\${htmlParadas}</td>
-        </tr>
-        \`;
+        return '<tr class="hover:bg-gray-50"><td class="px-4 py-3 font-semibold text-gray-900">' + v.rotaNome + '<br><span class="text-xs text-gray-500">' + new Date(v.horaSaida).toLocaleDateString() + '</span></td><td class="px-4 py-3"><b>' + v.veiculoModelo + '</b> (' + v.veiculoPlaca + ')<br><span class="text-xs text-gray-600">' + v.motoristaNome + '</span></td><td class="px-4 py-3 text-xs">Saída: ' + new Date(v.horaSaida).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) + '<br>Chegada: ' + new Date(v.horaChegada).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) + '</td><td class="px-4 py-3 font-bold text-correiosAzul">' + v.kmRodados + ' km</td><td class="px-4 py-3 text-gray-700">' + v.tempoGasto + '</td><td class="px-4 py-3">' + htmlParadas + '</td></tr>';
     }).join('');
 }
 
@@ -582,6 +672,13 @@ app.get('/api/rotas', async (req, res) => res.json(await buscarDadosPorTipo('rot
 app.post('/api/rotas', async (req, res) => {
     const novo = { id: Date.now(), ...req.body };
     await salvarDadoSupabase('rota', novo);
+    res.status(201).json(novo);
+});
+
+app.get('/api/atribuicoes', async (req, res) => res.json(await buscarDadosPorTipo('atribuicao')));
+app.post('/api/atribuicoes', async (req, res) => {
+    const novo = { id: Date.now(), ...req.body };
+    await salvarDadoSupabase('atribuicao', novo);
     res.status(201).json(novo);
 });
 
@@ -622,5 +719,5 @@ app.post('/api/viagens', async (req, res) => {
 });
 
 app.listen(PORT, () => {
-    console.log(`Sistema com Perfis Correios rodando em http://localhost:${PORT}`);
+    console.log(`Sistema Correios com Atribuição rodando em http://localhost:${PORT}`);
 });
