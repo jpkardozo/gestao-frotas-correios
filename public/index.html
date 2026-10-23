@@ -1,0 +1,743 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Gestão de Frotas - Correios</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <style>
+        @media print {
+            body { background: white; margin: 0; padding: 0; font-family: Arial, sans-serif; }
+            #wrapper-sistema { display: none !important; }
+            #area-impressao { display: block !important; width: 100%; }
+            .tabela-ficha { width: 100%; border-collapse: collapse; font-size: 10px; color: black; }
+            .tabela-ficha th, .tabela-ficha td { border: 1px solid black; padding: 2px 4px; text-align: center; vertical-align: middle; }
+            .tabela-ficha .text-left { text-align: left; }
+            .tabela-ficha .text-right { text-align: right; }
+            .tabela-ficha .font-bold { font-weight: bold; }
+            .tabela-ficha .text-blue-item { color: #0000FF !important; -webkit-print-color-adjust: exact; }
+            .tabela-ficha .text-red-item { color: #FF0000 !important; font-weight: bold; -webkit-print-color-adjust: exact; }
+            .tabela-ficha .bg-header { background-color: #E5E7EB !important; -webkit-print-color-adjust: exact; }
+            @page { margin: 8mm; size: landscape; }
+        }
+    </style>
+</head>
+<body class="bg-gray-100 font-sans leading-normal tracking-normal text-gray-800 min-h-screen">
+
+    <div id="area-impressao" class="hidden"></div>
+
+    <div id="wrapper-sistema" class="flex flex-col justify-between min-h-screen">
+
+        <div id="auth-container" class="min-h-screen flex items-center justify-center p-4 bg-[#002F6C]">
+            <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-md border-t-8 border-[#FFCC00]">
+                <div class="text-center mb-6">
+                    <div class="bg-[#FFCC00] text-[#002F6C] font-black text-2xl py-2 px-4 rounded inline-block shadow mb-2 tracking-wider">CORREIOS</div>
+                    <h1 class="text-xl font-bold text-[#002F6C]">Gestão de Frota e Percursos</h1>
+                    <p class="text-xs text-gray-500 mt-1">Acesse com Usuário, Matrícula ou CPF</p>
+                </div>
+
+                <div id="auth-erro" class="mb-4 p-3 bg-red-100 text-red-700 rounded text-sm hidden"></div>
+
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700">Identificador (Usuário, Matrícula ou CPF):</label>
+                        <input type="text" id="login-id" required placeholder="meu@email.com" class="mt-1 block w-full border border-gray-300 rounded p-2.5 focus:ring-2 focus:ring-[#002F6C] focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700">Senha:</label>
+                        <input type="password" id="login-senha" required class="mt-1 block w-full border border-gray-300 rounded p-2.5 focus:ring-2 focus:ring-[#002F6C] focus:outline-none">
+                    </div>
+                    <button type="button" onclick="fazerLogin()" class="w-full bg-[#FFCC00] text-[#002F6C] font-bold p-3 rounded shadow hover:bg-[#E5B800] transition cursor-pointer">Entrar no Sistema</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="app-container" class="container mx-auto p-4 max-w-7xl hidden flex-grow">
+            <header class="bg-[#002F6C] text-white p-6 rounded-lg shadow-md mb-6 flex flex-col md:flex-row justify-between items-center border-b-4 border-[#FFCC00]">
+                <div class="flex items-center space-x-4 mb-4 md:mb-0">
+                    <div class="bg-[#FFCC00] text-[#002F6C] font-black text-xl py-1.5 px-3 rounded shadow">CORREIOS</div>
+                    <div>
+                        <h1 class="text-2xl font-bold">Painel de Controle Operacional</h1>
+                        <p class="text-blue-200 text-sm mt-0.5">Usuário: <span id="user-name-display" class="font-semibold underline"></span> | Perfil: <span id="user-role-display" class="bg-[#FFCC00] text-[#002F6C] px-2 py-0.5 rounded text-xs font-bold uppercase"></span></p>
+                    </div>
+                </div>
+                <button onclick="fazerLogout()" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded font-bold text-sm shadow transition cursor-pointer">Encerrar Sessão</button>
+            </header>
+
+            <div id="menu-abas" class="flex flex-wrap gap-2 mb-6 border-b-2 border-gray-300 pb-3"></div>
+
+            <!-- ABA 1: EXECUTAR / LANÇAR VIAGEM -->
+            <div id="tab-viagem" class="tab-content bg-white p-6 rounded-lg shadow-md border border-gray-200">
+                <h2 class="text-xl font-bold mb-4 text-[#002F6C] border-b pb-2">Lançamento e Execução de Viagem</h2>
+                <form id="form-viagem" onsubmit="salvarViagem(event)" class="space-y-4">
+                    <input type="hidden" id="v-viagem-id" value="">
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700">Rota Designada:</label>
+                            <select id="v-rota" required onchange="carregarEstruturaRota()" class="mt-1 block w-full border border-gray-300 rounded p-2.5 bg-gray-50"></select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700">Veículo Designado:</label>
+                            <select id="v-veiculo" required class="mt-1 block w-full border border-gray-300 rounded p-2.5 bg-gray-50"></select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700">Motorista Responsável:</label>
+                            <select id="v-motorista" required class="mt-1 block w-full border border-gray-300 rounded p-2.5 bg-gray-50"></select>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 bg-blue-50 p-4 rounded-md border border-blue-200">
+                        <div>
+                            <label class="block text-sm font-semibold text-[#002F6C]">Hora Prevista de Saída:</label>
+                            <input type="datetime-local" id="v-hora-prevista-saida" required class="mt-1 block w-full border border-gray-300 rounded p-2 bg-white">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold text-[#002F6C]">Hora Prevista de Chegada:</label>
+                            <input type="datetime-local" id="v-hora-prevista-chegada" required class="mt-1 block w-full border border-gray-300 rounded p-2 bg-white">
+                        </div>
+                    </div>
+
+                    <div class="bg-gray-50 p-4 rounded-md border border-gray-200 mt-4">
+                        <h3 class="font-bold text-[#002F6C] mb-2" id="label-origem">Ponto de Saída (Origem Real)</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div><label class="block text-sm font-semibold text-gray-700">Odômetro Inicial (km):</label><input type="number" step="0.01" id="v-odometro-inicial" required class="mt-1 block w-full border border-gray-300 rounded p-2 bg-white"></div>
+                            <div><label class="block text-sm font-semibold text-gray-700">Hora de Saída Real:</label><input type="datetime-local" id="v-hora-saida" required class="mt-1 block w-full border border-gray-300 rounded p-2 bg-white"></div>
+                        </div>
+                    </div>
+
+                    <div class="border-t pt-4 mt-4">
+                        <h3 class="text-lg font-bold text-[#002F6C] mb-2">Preenchimento Ponto a Ponto (Paradas)</h3>
+                        <div id="container-paradas-execucao" class="space-y-4">
+                            <p class="text-sm text-gray-500 italic">Selecione uma rota acima para carregar as paradas planejadas.</p>
+                        </div>
+                    </div>
+
+                    <div class="bg-amber-50 p-4 rounded-md border border-amber-200 mt-4">
+                        <h3 class="font-bold text-amber-900 mb-2" id="label-destino">Ponto Final / Destino Real</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div><label class="block text-sm font-semibold text-gray-700">Odômetro Final (Chegada km):</label><input type="number" step="0.01" id="v-odometro-final" required class="mt-1 block w-full border border-gray-300 rounded p-2 bg-white"></div>
+                            <div><label class="block text-sm font-semibold text-gray-700">Hora de Chegada Final:</label><input type="datetime-local" id="v-hora-chegada" required class="mt-1 block w-full border border-gray-300 rounded p-2 bg-white"></div>
+                        </div>
+                    </div>
+
+                    <button type="submit" id="btn-salvar-viagem" class="w-full bg-[#FFCC00] text-[#002F6C] font-bold p-3 rounded shadow hover:bg-[#E5B800] transition mt-6 text-base cursor-pointer">Registrar / Salvar Execução da Viagem</button>
+                </form>
+            </div>
+
+            <!-- ABA 2: CADASTRO DE ROTAS -->
+            <div id="tab-rotas" class="tab-content hidden bg-white p-6 rounded-lg shadow-md border border-gray-200">
+                <h2 class="text-xl font-bold mb-4 text-[#002F6C] border-b pb-2">Cadastrar Nova Rota Antecipada</h2>
+                <form onsubmit="salvarRota(event)" class="space-y-4">
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div><label class="block text-sm font-semibold text-gray-700">Nome da Rota:</label><input type="text" id="r-nome" required class="mt-1 block w-full border border-gray-300 rounded p-2.5"></div>
+                        <div><label class="block text-sm font-semibold text-gray-700">Local de Saída (Origem):</label><input type="text" id="r-origem" required class="mt-1 block w-full border border-gray-300 rounded p-2.5"></div>
+                        <div><label class="block text-sm font-semibold text-gray-700">Local de Chegada (Destino):</label><input type="text" id="r-destino" required class="mt-1 block w-full border border-gray-300 rounded p-2.5"></div>
+                    </div>
+                    <div class="border-t pt-4">
+                        <div class="flex justify-between items-center mb-2">
+                            <h3 class="text-lg font-bold text-[#002F6C]">Paradas Intermediárias</h3>
+                            <button type="button" onclick="adicionarParadaRota()" class="bg-[#002F6C] text-[#FFCC00] font-bold px-3 py-1.5 text-sm rounded shadow cursor-pointer">+ Adicionar Parada</button>
+                        </div>
+                        <div id="lista-paradas-rota" class="space-y-2"></div>
+                    </div>
+                    <button type="submit" class="bg-[#FFCC00] text-[#002F6C] font-bold px-6 py-2.5 rounded shadow hover:bg-[#E5B800] transition mt-2 cursor-pointer">Salvar Rota</button>
+                </form>
+            </div>
+
+            <!-- ABA 3: FROTA & ATRIBUIÇÕES -->
+            <div id="tab-cadastros" class="tab-content hidden space-y-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="bg-white p-6 rounded-lg shadow-md border border-gray-200">
+                        <h2 class="text-xl font-bold mb-4 text-[#002F6C] border-b pb-2">Cadastrar Veículo</h2>
+                        <form onsubmit="salvarVeiculo(event)" class="space-y-4">
+                            <div><label class="block text-sm font-semibold text-gray-700">Modelo:</label><input type="text" id="cad-modelo" required class="mt-1 block w-full border border-gray-300 rounded p-2.5"></div>
+                            <div><label class="block text-sm font-semibold text-gray-700">Placa:</label><input type="text" id="cad-placa" required class="mt-1 block w-full border border-gray-300 rounded p-2.5"></div>
+                            <button type="submit" class="bg-[#FFCC00] text-[#002F6C] font-bold px-4 py-2 rounded shadow cursor-pointer">Salvar Veículo</button>
+                        </form>
+                    </div>
+
+                    <div class="bg-white p-6 rounded-lg shadow-md border border-gray-200">
+                        <h2 class="text-xl font-bold mb-4 text-[#002F6C] border-b pb-2">Cadastrar Motorista</h2>
+                        <form onsubmit="salvarMotorista(event)" class="space-y-4">
+                            <div><label class="block text-sm font-semibold text-gray-700">Nome do Condutor:</label><input type="text" id="cad-nome" required class="mt-1 block w-full border border-gray-300 rounded p-2.5"></div>
+                            <div class="grid grid-cols-2 gap-2">
+                                <div><label class="block text-sm font-semibold text-gray-700">CNH:</label><input type="text" id="cad-cnh" required class="mt-1 block w-full border border-gray-300 rounded p-2.5"></div>
+                                <div><label class="block text-sm font-semibold text-gray-700">Matrícula:</label><input type="text" id="cad-matricula" placeholder="Ex: 8.628.454-1" class="mt-1 block w-full border border-gray-300 rounded p-2.5"></div>
+                            </div>
+                            <div class="grid grid-cols-2 gap-2">
+                                <div><label class="block text-sm font-semibold text-gray-700">RG/Órgão:</label><input type="text" id="cad-rg" placeholder="Ex: 2.418.961" class="mt-1 block w-full border border-gray-300 rounded p-2.5"></div>
+                                <div><label class="block text-sm font-semibold text-gray-700">Celular:</label><input type="text" id="cad-celular" placeholder="Ex: 84-99938-8409" class="mt-1 block w-full border border-gray-300 rounded p-2.5"></div>
+                            </div>
+                            <button type="submit" class="bg-[#FFCC00] text-[#002F6C] font-bold px-4 py-2 rounded shadow w-full cursor-pointer">Salvar Motorista</button>
+                        </form>
+                    </div>
+                </div>
+
+                <div class="bg-white p-6 rounded-lg shadow-md border border-gray-200 border-l-8 border-l-[#002F6C]">
+                    <h2 class="text-xl font-bold mb-2 text-[#002F6C]">Atribuir Rota e Veículo ao Motorista</h2>
+                    <form onsubmit="salvarAtribuicao(event)" class="space-y-4">
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div><label class="block text-sm font-semibold text-gray-700">Motorista:</label><select id="atrib-motorista" required class="mt-1 block w-full border border-gray-300 rounded p-2.5 bg-gray-50"></select></div>
+                            <div><label class="block text-sm font-semibold text-gray-700">Veículo:</label><select id="atrib-veiculo" required class="mt-1 block w-full border border-gray-300 rounded p-2.5 bg-gray-50"></select></div>
+                            <div><label class="block text-sm font-semibold text-gray-700">Rota:</label><select id="atrib-rota" required class="mt-1 block w-full border border-gray-300 rounded p-2.5 bg-gray-50"></select></div>
+                        </div>
+                        <button type="submit" class="bg-[#FFCC00] text-[#002F6C] font-bold px-6 py-2.5 rounded shadow cursor-pointer">Salvar Atribuição</button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- ABA 4: GESTÃO DE USUÁRIOS (APENAS ADMIN) -->
+            <div id="tab-usuarios" class="tab-content hidden space-y-6">
+                <div class="bg-white p-6 rounded-lg shadow-md border border-gray-200">
+                    <h2 class="text-xl font-bold mb-4 text-[#002F6C] border-b pb-2">Cadastrar Novo Usuário do Sistema (Matrícula ou CPF)</h2>
+                    <form onsubmit="cadastrarUsuarioSistema(event)" class="space-y-4">
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div><label class="block text-sm font-semibold text-gray-700">Nome Completo:</label><input type="text" id="u-nome" required class="mt-1 block w-full border border-gray-300 rounded p-2.5"></div>
+                            <div><label class="block text-sm font-semibold text-gray-700">Identificador (Login / Matrícula / CPF):</label><input type="text" id="u-identificador" required placeholder="Ex: 8.628.454-1 ou 045..." class="mt-1 block w-full border border-gray-300 rounded p-2.5"></div>
+                            <div><label class="block text-sm font-semibold text-gray-700">Senha Inicial:</label><input type="text" id="u-senha" required value="correios2026" class="mt-1 block w-full border border-gray-300 rounded p-2.5"></div>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div>
+                                <label class="block text-sm font-semibold text-gray-700">Função / Perfil (Hierarquia):</label>
+                                <select id="u-papel" class="mt-1 block w-full border border-gray-300 rounded p-2.5 bg-gray-50">
+                                    <option value="motorista">Motorista</option>
+                                    <option value="supervisor">Supervisor (Gestor)</option>
+                                    <option value="admin">Administrador Máximo</option>
+                                </select>
+                            </div>
+                            <div><label class="block text-sm font-semibold text-gray-700">Matrícula:</label><input type="text" id="u-mat" class="mt-1 block w-full border border-gray-300 rounded p-2.5"></div>
+                            <div><label class="block text-sm font-semibold text-gray-700">Celular:</label><input type="text" id="u-cel" class="mt-1 block w-full border border-gray-300 rounded p-2.5"></div>
+                        </div>
+                        <button type="submit" class="bg-[#FFCC00] text-[#002F6C] font-bold px-6 py-2.5 rounded shadow cursor-pointer">Cadastrar Usuário no Sistema</button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- ABA 5: MAPA GERAL E RASTREAMENTO AO VIVO -->
+            <div id="tab-mapa" class="tab-content hidden space-y-6">
+                <div class="bg-white p-6 rounded-lg shadow-md border border-gray-200">
+                    <div class="flex justify-between items-center mb-4 border-b pb-2">
+                        <h2 class="text-xl font-bold text-[#002F6C]">🗺️ Painel Geral & Mapa de Rastreamento da Frota</h2>
+                        <button onclick="carregarMapaGeral()" class="bg-[#002F6C] text-[#FFCC00] font-bold px-4 py-1.5 rounded text-sm shadow cursor-pointer">🔄 Atualizar Posições</button>
+                    </div>
+                    <div id="mapa-frota" class="w-full h-[500px] rounded-lg border shadow-inner z-0"></div>
+                </div>
+            </div>
+
+            <!-- ABA 6: RELATÓRIO & HISTÓRICO -->
+            <div id="tab-relatorio" class="tab-content hidden bg-white p-6 rounded-lg shadow-md border border-gray-200">
+                <h2 class="text-xl font-bold mb-4 text-[#002F6C] border-b pb-2">Histórico de Viagens, Edição e Fichas Oficiais</h2>
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200 border">
+                        <thead class="bg-[#002F6C] text-white">
+                            <tr>
+                                <th class="px-4 py-3 text-left text-xs font-semibold uppercase">Rota / Data</th>
+                                <th class="px-4 py-3 text-left text-xs font-semibold uppercase">Motorista / Veículo</th>
+                                <th class="px-4 py-3 text-left text-xs font-semibold uppercase">Km Rodados / Tempo</th>
+                                <th class="px-4 py-3 text-center text-xs font-semibold uppercase">Ações Operacionais</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tabela-relatorio" class="bg-white divide-y divide-gray-200 text-sm"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- ABA 7: CENTRAL DE ALERTAS (SUPERVISOR / ADMIN) -->
+            <div id="tab-alertas" class="tab-content hidden space-y-6">
+                <div class="bg-white p-6 rounded-lg shadow-md border border-gray-200">
+                    <h2 class="text-xl font-bold mb-4 text-[#002F6C] border-b pb-2">🚨 Central de Avisos e Paradas dos Motoristas</h2>
+                    <div id="lista-alertas" class="space-y-3">
+                        <p class="text-sm text-gray-500 italic">Nenhum alerta recente registrado.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <footer class="bg-[#002F6C] text-white py-6 border-t-4 border-[#FFCC00] mt-auto">
+            <div class="container mx-auto px-4 text-center space-y-2">
+                <p class="text-sm font-medium">Desenvolvido com dedicação por <span class="font-bold text-[#FFCC00]">João Paulo Cardoso</span></p>
+                <p class="text-xs text-blue-200">Portal Open-Source: <a href="https://linuxcriativo.com.br" target="_blank" class="text-[#FFCC00] font-bold underline hover:text-white transition">Linux Criativo</a></p>
+            </div>
+        </footer>
+    </div>
+
+    <script>
+        let usuarioLogado = null;
+        let rotasGlobais = [];
+        let veiculosGlobais = [];
+        let motoristasGlobais = [];
+        let atribuicoesGlobais = [];
+        let viagensGlobais = [];
+        let usuariosGlobais = [];
+        let mapaInstancia = null;
+
+        function esc(str) {
+            if (!str) return '';
+            return String(str).replace(/'/g, "&#39;").replace(/"/g, '&quot;');
+        }
+
+        async function fazerLogin() {
+            const ident = document.getElementById('login-id').value.trim().toLowerCase();
+            const senha = document.getElementById('login-senha').value;
+            const erroDiv = document.getElementById('auth-erro');
+            erroDiv.classList.add('hidden');
+
+            try {
+                const res = await fetch('/api/usuarios');
+                usuariosGlobais = await res.json();
+
+                const usuario = usuariosGlobais.find(function(u) {
+                    const matchId = u.identificador && u.identificador.toLowerCase() === ident;
+                    const matchMat = u.matricula && u.matricula.toLowerCase() === ident;
+                    const matchCpf = u.cpf && u.cpf === ident;
+                    const matchEmail = u.email && u.email.toLowerCase() === ident;
+                    return matchId || matchMat || matchCpf || matchEmail;
+                });
+
+                if (usuario && usuario.senha === senha) {
+                    usuarioLogado = usuario;
+                    localStorage.setItem('correios_usuario', JSON.stringify(usuario));
+                    inicializarSistema();
+                } else {
+                    erroDiv.innerText = 'Identificador ou senha incorretos.';
+                    erroDiv.classList.remove('hidden');
+                }
+            } catch (err) {
+                console.error('Erro no login:', err);
+                erroDiv.innerText = 'Erro ao conectar com o servidor.';
+                erroDiv.classList.remove('hidden');
+            }
+        }
+
+        function verificarSessaoSalva() {
+            const salvo = localStorage.getItem('correios_usuario');
+            if (salvo) {
+                try {
+                    usuarioLogado = JSON.parse(salvo);
+                    inicializarSistema();
+                } catch (e) {
+                    localStorage.removeItem('correios_usuario');
+                }
+            }
+        }
+
+        function fazerLogout() {
+            localStorage.removeItem('correios_usuario');
+            usuarioLogado = null;
+            document.getElementById('auth-container').classList.remove('hidden');
+            document.getElementById('app-container').classList.add('hidden');
+        }
+
+        async function inicializarSistema() {
+            document.getElementById('auth-container').classList.add('hidden');
+            document.getElementById('app-container').classList.remove('hidden');
+            document.getElementById('user-name-display').innerText = usuarioLogado.nome;
+            document.getElementById('user-role-display').innerText = usuarioLogado.papel;
+
+            configurarMenuPorPerfil();
+            await carregarDadosIniciais();
+            mudarAba('tab-viagem');
+        }
+
+        function configurarMenuPorPerfil() {
+            const menu = document.getElementById('menu-abas');
+            let html = '<button onclick="mudarAba(&#39;tab-viagem&#39;)" class="tab-btn bg-[#002F6C] text-white px-4 py-2 rounded font-bold text-sm cursor-pointer">Executar / Lançar Viagem</button>';
+
+            if (usuarioLogado.papel === 'admin' || usuarioLogado.papel === 'supervisor') {
+                html += '<button onclick="mudarAba(&#39;tab-rotas&#39;)" class="tab-btn bg-white text-gray-700 border px-4 py-2 rounded font-bold text-sm cursor-pointer">Cadastrar Rotas</button>' +
+                        '<button onclick="mudarAba(&#39;tab-cadastros&#39;)" class="tab-btn bg-white text-gray-700 border px-4 py-2 rounded font-bold text-sm cursor-pointer">Frota / Atribuições</button>' +
+                        '<button onclick="mudarAba(&#39;tab-mapa&#39;)" class="tab-btn bg-white text-gray-700 border px-4 py-2 rounded font-bold text-sm cursor-pointer">🗺️ Mapa & Frota ao Vivo</button>' +
+                        '<button onclick="mudarAba(&#39;tab-alertas&#39;)" class="tab-btn bg-white text-gray-700 border px-4 py-2 rounded font-bold text-sm cursor-pointer">🚨 Central de Alertas</button>';
+            }
+
+            if (usuarioLogado.papel === 'admin') {
+                html += '<button onclick="mudarAba(&#39;tab-usuarios&#39;)" class="tab-btn bg-white text-gray-700 border px-4 py-2 rounded font-bold text-sm cursor-pointer">👥 Gerenciar Usuários</button>';
+            }
+
+            html += '<button onclick="mudarAba(&#39;tab-relatorio&#39;)" class="tab-btn bg-white text-gray-700 border px-4 py-2 rounded font-bold text-sm cursor-pointer">Relatório & Fichas Oficiais</button>';
+            menu.innerHTML = html;
+        }
+
+        function mudarAba(abaId) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            document.querySelectorAll('.tab-btn').forEach(el => { el.classList.remove('bg-[#002F6C]', 'text-white'); el.classList.add('bg-white', 'text-gray-700', 'border'); });
+            document.getElementById(abaId).classList.remove('hidden');
+
+            const btnAtivo = Array.from(document.querySelectorAll('.tab-btn')).find(b => b.getAttribute('onclick').includes(abaId));
+            if(btnAtivo) {
+                btnAtivo.classList.remove('bg-white', 'text-gray-700', 'border');
+                btnAtivo.classList.add('bg-[#002F6C]', 'text-white');
+            }
+
+            if(abaId === 'tab-relatorio') carregarRelatorio();
+            if(abaId === 'tab-viagem') carregarDadosIniciais();
+            if(abaId === 'tab-mapa') setTimeout(inicializarMapa, 200);
+            if(abaId === 'tab-alertas') carregarAlertas();
+        }
+
+        async function carregarDadosIniciais() {
+            veiculosGlobais = await (await fetch('/api/veiculos')).json();
+            motoristasGlobais = await (await fetch('/api/motoristas')).json();
+            rotasGlobais = await (await fetch('/api/rotas')).json();
+            atribuicoesGlobais = await (await fetch('/api/atribuicoes')).json();
+            usuariosGlobais = await (await fetch('/api/usuarios')).json();
+
+            const selectM = document.getElementById('atrib-motorista');
+            if(selectM) selectM.innerHTML = '<option value="">Selecione...</option>' + motoristasGlobais.map(m => '<option value="'+m.id+'">'+esc(m.nome)+'</option>').join('');
+            const selectV = document.getElementById('atrib-veiculo');
+            if(selectV) selectV.innerHTML = '<option value="">Selecione...</option>' + veiculosGlobais.map(v => '<option value="'+v.id+'">'+esc(v.modelo)+' ('+esc(v.placa)+')</option>').join('');
+            const selectR = document.getElementById('atrib-rota');
+            if(selectR) selectR.innerHTML = '<option value="">Selecione...</option>' + rotasGlobais.map(r => '<option value="'+r.id+'">'+esc(r.nome)+'</option>').join('');
+
+            const selectRotaV = document.getElementById('v-rota');
+            const selectVeiculoV = document.getElementById('v-veiculo');
+            const selectMotoristaV = document.getElementById('v-motorista');
+
+            if (usuarioLogado.papel === 'admin' || usuarioLogado.papel === 'supervisor') {
+                selectRotaV.innerHTML = '<option value="">Selecione a rota...</option>' + rotasGlobais.map(r => '<option value="' + r.id + '">' + esc(r.nome) + '</option>').join('');
+                selectVeiculoV.innerHTML = '<option value="">Selecione o veículo...</option>' + veiculosGlobais.map(v => '<option value="' + v.id + '">' + esc(v.placa) + '</option>').join('');
+                selectMotoristaV.innerHTML = '<option value="">Selecione o motorista...</option>' + motoristasGlobais.map(m => '<option value="' + m.id + '">' + esc(m.nome) + '</option>').join('');
+            } else {
+                const motoristaVinculado = motoristasGlobais.find(m => m.nome.toLowerCase().includes(usuarioLogado.nome.toLowerCase())) || motoristasGlobais[0];
+                if (motoristaVinculado) {
+                    selectMotoristaV.innerHTML = '<option value="' + motoristaVinculado.id + '">' + esc(motoristaVinculado.nome) + '</option>';
+                    selectMotoristaV.disabled = true;
+                    const minhasAtrib = atribuicoesGlobais.filter(a => a.motoristaId == motoristaVinculado.id);
+                    selectRotaV.innerHTML = '<option value="">Sua rota...</option>' + rotasGlobais.filter(r => minhasAtrib.some(a => a.rotaId == r.id)).map(r => '<option value="' + r.id + '">' + esc(r.nome) + '</option>').join('');
+                    selectVeiculoV.innerHTML = '<option value="">Seu veículo...</option>' + veiculosGlobais.filter(v => minhasAtrib.some(a => a.veiculoId == v.id)).map(v => '<option value="' + v.id + '">' + esc(v.placa) + '</option>').join('');
+                }
+            }
+        }
+
+        async function cadastrarUsuarioSistema(e) {
+            e.preventDefault();
+            const novo = {
+                id: Date.now(),
+                nome: document.getElementById('u-nome').value,
+                identificador: document.getElementById('u-identificador').value,
+                senha: document.getElementById('u-senha').value,
+                papel: document.getElementById('u-papel').value,
+                matricula: document.getElementById('u-mat').value,
+                celular: document.getElementById('u-cel').value,
+                cpf: document.getElementById('u-identificador').value
+            };
+            await fetch('/api/usuarios', {
+                method: 'POST', headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(novo)
+            });
+            alert('Usuário cadastrado com sucesso!');
+            e.target.reset();
+        }
+
+        async function salvarMotorista(e) {
+            e.preventDefault();
+            await fetch('/api/motoristas', {
+                method: 'POST', headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    nome: document.getElementById('cad-nome').value,
+                    cnh: document.getElementById('cad-cnh').value,
+                    matricula: document.getElementById('cad-matricula').value,
+                    rg: document.getElementById('cad-rg').value,
+                    celular: document.getElementById('cad-celular').value
+                })
+            });
+            alert('Motorista salvo!'); carregarDadosIniciais(); e.target.reset();
+        }
+
+        async function salvarVeiculo(e) {
+            e.preventDefault();
+            await fetch('/api/veiculos', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({modelo: document.getElementById('cad-modelo').value, placa: document.getElementById('cad-placa').value})});
+            alert('Veículo salvo!'); carregarDadosIniciais(); e.target.reset();
+        }
+
+        async function salvarAtribuicao(e) {
+            e.preventDefault();
+            await fetch('/api/atribuicoes', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ motoristaId: document.getElementById('atrib-motorista').value, veiculoId: document.getElementById('atrib-veiculo').value, rotaId: document.getElementById('atrib-rota').value }) });
+            alert('Atribuição salva!');
+        }
+
+        function adicionarParadaRota() {
+            document.getElementById('lista-paradas-rota').insertAdjacentHTML('beforeend', '<div class="flex gap-2 parada-rota-item mb-2"><input type="text" name="localParada" placeholder="Local da Parada" class="flex-1 border p-1 rounded"><button type="button" onclick="this.parentElement.remove()" class="text-red-600 font-bold px-2 cursor-pointer">X</button></div>');
+        }
+
+        async function salvarRota(e) {
+            e.preventDefault();
+            const paradas = Array.from(document.querySelectorAll('.parada-rota-item input')).map(i => i.value);
+            await fetch('/api/rotas', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ nome: document.getElementById('r-nome').value, origem: document.getElementById('r-origem').value, destino: document.getElementById('r-destino').value, paradas }) });
+            alert('Rota salva com sucesso!'); e.target.reset(); carregarDadosIniciais();
+        }
+
+        function carregarEstruturaRota(paradasExistentes = []) {
+            const rotaId = document.getElementById('v-rota').value;
+            const container = document.getElementById('container-paradas-execucao');
+            const rota = rotasGlobais.find(r => r.id == rotaId);
+            if(!rota || !rota.paradas) { container.innerHTML = ''; return; }
+
+            container.innerHTML = rota.paradas.map((local, idx) => {
+                const pEx = paradasExistentes[idx] || {};
+                return '<div class="p-3 border rounded bg-gray-50 parada-execucao-item" data-local="' + esc(local) + '">' +
+                    '<h4 class="font-bold text-[#002F6C]">' + (idx + 1) + ' - ' + esc(local) + ' <button type="button" onclick="adicionarTrechoExtra(this)" class="text-xs bg-[#002F6C] text-[#FFCC00] px-2 py-0.5 rounded float-right cursor-pointer">+ Inserir Trecho Extra</button></h4>' +
+                    '<div class="grid grid-cols-1 md:grid-cols-5 gap-2 mt-2">' +
+                        '<div><label class="text-xs font-semibold">Qtd Malotes:</label><input type="number" name="malotes" value="' + (pEx.malotes || 1) + '" required class="border p-1 text-xs w-full bg-white"></div>' +
+                        '<div><label class="text-xs font-semibold">Hora Chegada:</label><input type="datetime-local" name="horaChegada" value="' + (pEx.horaChegada || '') + '" required class="border p-1 text-xs w-full bg-white"></div>' +
+                        '<div><label class="text-xs font-semibold">Km Chegada:</label><input type="number" step="0.01" name="odoChegada" value="' + (pEx.odoChegada || '') + '" placeholder="Km" required class="border p-1 text-xs w-full bg-white"></div>' +
+                        '<div><label class="text-xs font-semibold">Hora Partida:</label><input type="datetime-local" name="horaSaida" value="' + (pEx.horaSaida || '') + '" required class="border p-1 text-xs w-full bg-white"></div>' +
+                        '<div><label class="text-xs font-semibold">Km Saída:</label><input type="number" step="0.01" name="odoSaida" value="' + (pEx.odoSaida || '') + '" placeholder="Km" required class="border p-1 text-xs w-full bg-white"></div>' +
+                    '</div>' +
+                '</div>';
+            }).join('');
+        }
+
+        function adicionarTrechoExtra(btn) {
+            const wrapper = btn.closest('.parada-execucao-item');
+            const localPai = wrapper.getAttribute('data-local') + ' (Extra)';
+            const htmlExtra = '<div class="p-3 border rounded bg-amber-50 parada-execucao-item mt-2" data-local="' + esc(localPai) + '">' +
+                '<h4 class="font-bold text-amber-800">Trecho Adicional <button type="button" onclick="this.closest(\'.parada-execucao-item\').remove()" class="text-xs bg-red-600 text-white px-2 py-0.5 rounded float-right cursor-pointer">Remover</button></h4>' +
+                '<div class="grid grid-cols-1 md:grid-cols-5 gap-2 mt-2">' +
+                    '<div><label class="text-xs font-semibold">Qtd Malotes:</label><input type="number" name="malotes" value="1" required class="border p-1 text-xs w-full bg-white"></div>' +
+                    '<div><label class="text-xs font-semibold">Hora Chegada:</label><input type="datetime-local" name="horaChegada" required class="border p-1 text-xs w-full bg-white"></div>' +
+                    '<div><label class="text-xs font-semibold">Km Chegada:</label><input type="number" step="0.01" name="odoChegada" placeholder="Km" required class="border p-1 text-xs w-full bg-white"></div>' +
+                    '<div><label class="text-xs font-semibold">Hora Partida:</label><input type="datetime-local" name="horaSaida" required class="border p-1 text-xs w-full bg-white"></div>' +
+                    '<div><label class="text-xs font-semibold">Km Saída:</label><input type="number" step="0.01" name="odoSaida" placeholder="Km" required class="border p-1 text-xs w-full bg-white"></div>' +
+                '</div>' +
+            '</div>';
+            wrapper.insertAdjacentHTML('afterend', htmlExtra);
+        }
+
+        async function salvarViagem(e) {
+            e.preventDefault();
+            const viagemId = document.getElementById('v-viagem-id').value || Date.now();
+            const paradasExecutadas = Array.from(document.querySelectorAll('.parada-execucao-item')).map(el => ({
+                local: el.getAttribute('data-local'),
+                malotes: parseInt(el.querySelector('input[name="malotes"]').value) || 0,
+                horaChegada: el.querySelector('input[name="horaChegada"]').value,
+                odoChegada: parseFloat(el.querySelector('input[name="odoChegada"]').value) || 0,
+                horaSaida: el.querySelector('input[name="horaSaida"]').value,
+                odoSaida: parseFloat(el.querySelector('input[name="odoSaida"]').value) || 0
+            }));
+
+            const dadosViagem = {
+                id: Number(viagemId),
+                rotaId: document.getElementById('v-rota').value,
+                veiculoId: document.getElementById('v-veiculo').value,
+                motoristaId: document.getElementById('v-motorista').value,
+                horaPrevistaSaida: document.getElementById('v-hora-prevista-saida').value,
+                horaPrevistaChegada: document.getElementById('v-hora-prevista-chegada').value,
+                odometroInicial: parseFloat(document.getElementById('v-odometro-inicial').value) || 0,
+                horaSaida: document.getElementById('v-hora-saida').value,
+                odometroFinal: parseFloat(document.getElementById('v-odometro-final').value) || 0,
+                horaChegada: document.getElementById('v-hora-chegada').value,
+                paradas: paradasExecutadas
+            };
+
+            await fetch('/api/viagens', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(dadosViagem)
+            });
+
+            const motoristaObj = motoristasGlobais.find(m => m.id == dadosViagem.motoristaId) || {};
+            await fetch('/api/alertas', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    id: Date.now(),
+                    mensagem: 'Viagem executada/atualizada por ' + (motoristaObj.nome || 'Motorista') + ' com ' + paradasExecutadas.length + ' paradas registradas.',
+                    data: new Date().toISOString()
+                })
+            });
+
+            alert('Execução e paradas salvas com sucesso!');
+            document.getElementById('form-viagem').reset();
+            document.getElementById('v-viagem-id').value = '';
+            mudarAba('tab-relatorio');
+        }
+
+        async function editarViagem(id) {
+            const v = viagensGlobais.find(x => x.id == id);
+            if (!v) return;
+            mudarAba('tab-viagem');
+            document.getElementById('v-viagem-id').value = v.id;
+            document.getElementById('v-rota').value = v.rotaId;
+            document.getElementById('v-veiculo').value = v.veiculoId;
+            document.getElementById('v-motorista').value = v.motoristaId;
+            document.getElementById('v-hora-prevista-saida').value = v.horaPrevistaSaida || '';
+            document.getElementById('v-hora-prevista-chegada').value = v.horaPrevistaChegada || '';
+            document.getElementById('v-odometro-inicial').value = v.odometroInicial;
+            document.getElementById('v-hora-saida').value = v.horaSaida;
+            document.getElementById('v-odometro-final').value = v.odometroFinal;
+            document.getElementById('v-hora-chegada').value = v.horaChegada;
+            carregarEstruturaRota(v.paradas);
+            window.scrollTo({top: 0, behavior: 'smooth'});
+        }
+
+        async function excluirViagem(id) {
+            if (confirm('Deseja realmente excluir esta viagem e seus registros?')) {
+                await fetch('/api/viagens/' + id, { method: 'DELETE' });
+                carregarRelatorio();
+            }
+        }
+
+        async function carregarRelatorio() {
+            viagensGlobais = await (await fetch('/api/viagens')).json();
+            const tbody = document.getElementById('tabela-relatorio');
+            if(viagensGlobais.length === 0) { tbody.innerHTML = '<tr><td colspan="4" class="text-center p-4">Nenhuma viagem registrada.</td></tr>'; return; }
+
+            tbody.innerHTML = viagensGlobais.map(v =>
+                '<tr class="border-t">' +
+                    '<td class="p-3"><b>' + esc(v.rotaNome) + '</b><br><span class="text-xs text-gray-500">' + new Date(v.horaSaida).toLocaleDateString() + '</span></td>' +
+                    '<td class="p-3">' + esc(v.motoristaNome) + '<br><span class="text-xs text-gray-500">' + esc(v.veiculoPlaca) + '</span></td>' +
+                    '<td class="p-3"><b>' + v.kmRodados.toFixed(2) + ' km</b><br><span class="text-xs text-blue-800">Duração: ' + v.tempoGasto + '</span></td>' +
+                    '<td class="p-3 text-center space-x-1">' +
+                        '<button onclick="imprimirFichaOficial(' + v.id + ')" class="bg-[#FFCC00] text-[#002F6C] font-bold px-2.5 py-1 rounded shadow text-xs cursor-pointer">🖨️ Ficha Oficial</button>' +
+                        (usuarioLogado.papel === 'admin' || usuarioLogado.papel === 'supervisor' ? '<button onclick="editarViagem(' + v.id + ')" class="bg-blue-600 text-white font-bold px-2 py-1 rounded shadow text-xs cursor-pointer">Editar</button><button onclick="excluirViagem(' + v.id + ')" class="bg-red-600 text-white font-bold px-2 py-1 rounded shadow text-xs cursor-pointer">Excluir</button>' : '') +
+                    '</td>' +
+                '</tr>'
+            ).join('');
+        }
+
+        async function carregarAlertas() {
+            const res = await fetch('/api/alertas');
+            const alertas = await res.json();
+            const container = document.getElementById('lista-alertas');
+            if (alertas.length === 0) {
+                container.innerHTML = '<p class="text-sm text-gray-500 italic">Nenhum alerta recente registrado.</p>';
+                return;
+            }
+            container.innerHTML = alertas.reverse().map(a =>
+                '<div class="p-3 border-l-4 border-[#FFCC00] bg-blue-50 rounded shadow-sm flex justify-between items-center">' +
+                    '<div><p class="text-sm font-bold text-[#002F6C]">' + esc(a.mensagem) + '</p><span class="text-xs text-gray-500">' + new Date(a.data).toLocaleString() + '</span></div>' +
+                '</div>'
+            ).join('');
+        }
+
+        function formatTime(dateStr) {
+            if(!dateStr) return '';
+            const d = new Date(dateStr);
+            return d.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+        }
+
+        function calcularDiferencaTempo(inicioStr, fimStr) {
+            if (!inicioStr || !fimStr) return '00:00';
+            const diffMs = new Date(fimStr) - new Date(inicioStr);
+            if (diffMs < 0) return '00:00';
+            const totalMins = Math.floor(diffMs / 60000);
+            const hrs = Math.floor(totalMins / 60);
+            const mins = totalMins % 60;
+            return (hrs < 10 ? '0' + hrs : hrs) + ':' + (mins < 10 ? '0' + mins : mins);
+        }
+
+        function imprimirFichaOficial(viagemId) {
+            const v = viagensGlobais.find(x => x.id == viagemId);
+            if(!v) return;
+
+            const dataViagem = new Date(v.horaSaida).toLocaleDateString('pt-BR');
+            const motorista = motoristasGlobais.find(m => m.id == v.motoristaId) || {};
+            const veiculo = veiculosGlobais.find(ve => ve.id == v.veiculoId) || {};
+            const rota = rotasGlobais.find(r => r.id == v.rotaId) || {};
+
+            let linhasParadasHTML = '';
+            let totalMalotes = 0;
+            let somaTotalMins = 0;
+
+            linhasParadasHTML += '<tr><td class="text-left text-blue-item font-bold">' + esc(rota.origem || 'Origem') + '</td><td class="text-blue-item">0,00</td><td class="text-blue-item">-</td><td class="text-blue-item">-</td><td class="text-blue-item">' + formatTime(v.horaSaida) + '</td><td class="text-blue-item">-</td><td class="text-blue-item">-</td><td class="text-blue-item">' + v.odometroInicial.toFixed(2).replace('.', ',') + '</td><td class="text-blue-item">' + formatTime(v.horaSaida) + '</td><td class="text-blue-item">' + formatTime(v.horaSaida) + '</td></tr>';
+
+            if(v.paradas && v.paradas.length > 0) {
+                v.paradas.forEach((p, idx) => {
+                    totalMalotes += p.malotes || 0;
+                    const kmTrecho = idx === 0
+                        ? (p.odoChegada - v.odometroInicial)
+                        : (p.odoChegada - v.paradas[idx - 1].odoSaida);
+
+                    const tempoParada = calcularDiferencaTempo(p.horaChegada, p.horaSaida);
+                    const tempoPercurso = calcularDiferencaTempo(idx === 0 ? v.horaSaida : v.paradas[idx - 1].horaSaida, p.horaChegada);
+
+                    const [hP, mP] = tempoPercurso.split(':').map(Number);
+                    somaTotalMins += (hP * 60) + mP;
+
+                    linhasParadasHTML += '<tr><td class="text-left text-blue-item">' + esc(p.local) + '</td><td class="text-blue-item">' + (kmTrecho >= 0 ? kmTrecho.toFixed(2).replace('.', ',') : '0,00') + '</td><td class="text-red-item">' + (p.malotes > 0 ? p.malotes : '-') + '</td><td class="text-blue-item">' + formatTime(p.horaChegada) + '</td><td class="text-blue-item">' + formatTime(p.horaSaida) + '</td><td class="text-blue-item">' + tempoParada + '</td><td class="text-blue-item">' + tempoPercurso + '</td><td class="text-blue-item">' + p.odoChegada.toFixed(2).replace('.', ',') + '</td><td class="text-blue-item">' + formatTime(p.horaChegada) + '</td><td class="text-blue-item">' + formatTime(p.horaSaida) + '</td></tr>';
+                });
+            }
+
+            const ultimaParada = v.paradas && v.paradas.length > 0 ? v.paradas[v.paradas.length - 1] : null;
+            const kmFinalTrecho = ultimaParada ? (v.odometroFinal - ultimaParada.odoSaida) : (v.odometroFinal - v.odometroInicial);
+            const tempoPercursoFinal = calcularDiferencaTempo(ultimaParada ? ultimaParada.horaSaida : v.horaSaida, v.horaChegada);
+
+            const [hF, mF] = tempoPercursoFinal.split(':').map(Number);
+            somaTotalMins += (hF * 60) + mF;
+
+            const totalHorasStr = Math.floor(somaTotalMins / 60) + ':' + (somaTotalMins % 60 < 10 ? '0' : '') + (somaTotalMins % 60);
+
+            linhasParadasHTML += '<tr><td class="text-left text-blue-item font-bold">' + esc(rota.destino || 'Destino') + '</td><td class="text-blue-item">' + (kmFinalTrecho >= 0 ? kmFinalTrecho.toFixed(2).replace('.', ',') : '0,00') + '</td><td class="text-blue-item">-</td><td class="text-blue-item">' + formatTime(v.horaChegada) + '</td><td class="text-blue-item">-</td><td class="text-blue-item">-</td><td class="text-blue-item">' + tempoPercursoFinal + '</td><td class="text-blue-item">' + v.odometroFinal.toFixed(2).replace('.', ',') + '</td><td class="text-blue-item">' + formatTime(v.horaChegada) + '</td><td class="text-blue-item">-</td></tr>';
+
+            const fichaHTML = '<table class="tabela-ficha">' +
+                '<tr><td colspan="2" class="font-bold text-blue-900" style="font-size: 14px;"><em>Correios</em></td><td colspan="8" class="font-bold text-xs">EMPRESA BRASILEIRA DE CORREIOS E TELÉGRAFOS<br>FICHA DE EMPREGO DE VEÍCULOS E CONDUTORES ENEM - 2026</td></tr>' +
+                '<tr><td colspan="2" class="font-bold text-left bg-header">ROTA: ' + esc(rota.nome || 'N/A') + '</td><td colspan="5" class="font-bold bg-header">' + esc(rota.origem || '') + ' / ' + esc(rota.destino || '') + '</td><td colspan="3" class="font-bold text-left bg-header">COLETA DIA ' + dataViagem + '</td></tr>' +
+                '<tr><td colspan="2" class="text-left font-bold">CONDUTOR:</td><td colspan="8" class="text-left font-bold">' + esc(motorista.nome ? motorista.nome.toUpperCase() : '') + '</td></tr>' +
+                '<tr><td colspan="2" class="text-left font-bold">MATRÍCULA:</td><td colspan="3" class="text-left font-bold">' + esc(motorista.matricula || '') + '</td><td colspan="3" class="font-bold">RG: ' + esc(motorista.rg || '') + '</td><td colspan="2" class="font-bold text-left">CELULAR: ' + esc(motorista.celular || '') + '</td></tr>' +
+                '<tr><td colspan="2" class="font-bold">VEÍCULO/MODELO:</td><td colspan="2" class="font-bold">' + esc(veiculo.modelo || '') + '</td><td colspan="2" class="font-bold">PLACA DO VEÍCULO:</td><td colspan="2" class="font-bold">' + esc(veiculo.placa || '') + '</td><td class="font-bold">CONTRATADO:</td><td class="font-bold">SIM</td></tr>' +
+                '<tr class="bg-header font-bold"><td colspan="2">PONTOS DE PARADA</td><td colspan="5">IDA</td><td colspan="3">DADOS REAIS DA OPERAÇÃO</td></tr>' +
+                '<tr class="bg-header font-bold"><td>ITINERÁRIO</td><td>KM</td><td>QUANT.<br>MALOTES</td><td>CHEGADA</td><td>PARTIDA</td><td>PARADA</td><td>PERCURSO</td><td>KM DE CHEGADA</td><td>CHEGADA</td><td>PARTIDA</td></tr>' +
+                linhasParadasHTML +
+                '<tr class="bg-header font-bold"><td class="text-right">KM TOTAL DO PERCURSO</td><td>' + v.kmRodados.toFixed(2).replace('.', ',') + '</td><td>' + totalMalotes + '</td><td colspan="4">' + totalHorasStr + '</td><td colspan="2" class="text-right">PESO TOTAL PREVISTO (KG)</td><td>144</td></tr>' +
+                '<tr><td colspan="10" class="text-left text-xs font-bold">TELEFONE CONTATO: 3673-5162 / 3673-5163</td></tr>' +
+                '<tr><td colspan="2" class="text-left font-bold">OBSERVAÇÕES:</td><td colspan="8" class="text-red-item font-bold text-left">ESTA FICHA DEVERÁ SER PREENCHIDA PONTO A PONTO E DEVOLVIDA NO 1º DIA ÚTIL SEGUINTE A OPERAÇÃO</td></tr>' +
+                '<tr><td colspan="5" class="text-left text-xs" style="border-right: none;">1) Devem ser observados a integridade dos lacres e malotes.<br>3) O carro deverá permanecer estacionado na agência.</td><td colspan="5" class="text-left text-xs" style="border-left: none;">2) Os malotes deverão sempre ser conferidos.<br><span class="text-red-item font-bold">4) Enviar o SMS imediatamente após a COLETA.</span></td></tr>' +
+            '</table>';
+
+            document.getElementById('area-impressao').innerHTML = fichaHTML;
+            window.print();
+        }
+
+        function inicializarMapa() {
+            if (mapaInstancia) {
+                mapaInstancia.invalidateSize();
+                return;
+            }
+            mapaInstancia = L.map('mapa-frota').setView([-5.6264, -37.7819], 10);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; OpenStreetMap contributors'
+            }).addTo(mapaInstancia);
+
+            carregarMarcadoresMapa();
+        }
+
+        async function carregarMarcadoresMapa() {
+            if (!mapaInstancia) return;
+            const res = await fetch('/api/viagens');
+            const viagens = await res.json();
+
+            viagens.forEach((v, index) => {
+                const motorista = motoristasGlobais.find(m => m.id == v.motoristaId) || {};
+                const veiculo = veiculosGlobais.find(ve => ve.id == v.veiculoId) || {};
+                const rota = rotasGlobais.find(r => r.id == v.rotaId) || {};
+
+                const latOffset = (index * 0.05);
+                const lngOffset = (index * 0.05);
+                const lat = -5.6264 + latOffset;
+                const lng = -37.7819 - lngOffset;
+
+                const diffMs = new Date(v.horaChegada || Date.now()) - new Date(v.horaSaida);
+                const horasTotais = diffMs > 0 ? diffMs / 3600000 : 0;
+                const velocidadeMedia = horasTotais > 0 ? (v.kmRodados / horasTotais).toFixed(1) : '0.0';
+
+                const popupContent = '<div class="p-2">' +
+                    '<h3 class="font-bold text-[#002F6C]">' + esc(rota.nome || 'Rota') + '</h3>' +
+                    '<p class="text-xs"><b>Condutor:</b> ' + esc(motorista.nome || '-') + '</p>' +
+                    '<p class="text-xs"><b>Veículo:</b> ' + esc(veiculo.placa || '-') + '</p>' +
+                    '<p class="text-xs"><b>Saída:</b> ' + formatTime(v.horaSaida) + '</p>' +
+                    '<p class="text-xs"><b>Previsão Chegada:</b> ' + formatTime(v.horaPrevistaChegada) + '</p>' +
+                    '<p class="text-xs"><b>Duração Atual:</b> ' + v.tempoGasto + '</p>' +
+                    '<p class="text-xs font-bold text-blue-700"><b>Velocidade Média:</b> ' + velocidadeMedia + ' km/h</p>' +
+                '</div>';
+
+                L.marker([lat, lng]).addTo(mapaInstancia).bindPopup(popupContent);
+            });
+        }
+
+        window.onload = verificarSessaoSalva;
+    </script>
+</body>
+</html>
