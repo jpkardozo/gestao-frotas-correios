@@ -84,7 +84,17 @@ app.get('/api/alertas', async (req, res) => res.json(await buscarDadosPorTipo('a
 app.post('/api/alertas', async (req, res) => {
     const novo = { id: Date.now(), ...req.body };
     await salvarDadoSupabase('alerta_sistema', novo);
-    res.status(201).json(novo);
+    res.status(201).json(novo); });
+
+app.put('/api/usuarios/:id', async (req, res) => {
+    const atualizado = { ...req.body };
+    await salvarDadoSupabase('usuario_sistema', atualizado);
+    res.json(atualizado);
+});
+
+app.delete('/api/usuarios/:id', async (req, res) => {
+    await deletarDadoSupabase('usuario_sistema_' + req.params.id);
+    res.json({ success: true });
 });
 
 app.get('/api/viagens', async (req, res) => {

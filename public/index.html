@@ -4,7 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sistema de Gestão de Frotas - Correios</title>
+    <!-- Importação do Tailwind CSS v4 via CDN para estilização moderna -->
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <!-- Importação do Leaflet para renderização de mapas interativos -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <style>
@@ -26,10 +28,12 @@
 </head>
 <body class="bg-gray-100 font-sans leading-normal tracking-normal text-gray-800 min-h-screen">
 
+    <!-- Container oculto exclusivo para impressão da Ficha Oficial ENEM -->
     <div id="area-impressao" class="hidden"></div>
 
     <div id="wrapper-sistema" class="flex flex-col justify-between min-h-screen">
 
+        <!-- Tela de Autenticação / Login -->
         <div id="auth-container" class="min-h-screen flex items-center justify-center p-4 bg-[#002F6C]">
             <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-md border-t-8 border-[#FFCC00]">
                 <div class="text-center mb-6">
@@ -43,7 +47,7 @@
                 <div class="space-y-4">
                     <div>
                         <label class="block text-sm font-semibold text-gray-700">Identificador (Usuário, Matrícula ou CPF):</label>
-                        <input type="text" id="login-id" required placeholder="meu@email.com" class="mt-1 block w-full border border-gray-300 rounded p-2.5 focus:ring-2 focus:ring-[#002F6C] focus:outline-none">
+                        <input type="text" id="login-id" required placeholder="Ex: jpkardozo" class="mt-1 block w-full border border-gray-300 rounded p-2.5 focus:ring-2 focus:ring-[#002F6C] focus:outline-none">
                     </div>
                     <div>
                         <label class="block text-sm font-semibold text-gray-700">Senha:</label>
@@ -54,6 +58,7 @@
             </div>
         </div>
 
+        <!-- Aplicação Principal (Oculta até o login) -->
         <div id="app-container" class="container mx-auto p-4 max-w-7xl hidden flex-grow">
             <header class="bg-[#002F6C] text-white p-6 rounded-lg shadow-md mb-6 flex flex-col md:flex-row justify-between items-center border-b-4 border-[#FFCC00]">
                 <div class="flex items-center space-x-4 mb-4 md:mb-0">
@@ -195,7 +200,7 @@
                     <form onsubmit="cadastrarUsuarioSistema(event)" class="space-y-4">
                         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                             <div><label class="block text-sm font-semibold text-gray-700">Nome Completo:</label><input type="text" id="u-nome" required class="mt-1 block w-full border border-gray-300 rounded p-2.5"></div>
-                            <div><label class="block text-sm font-semibold text-gray-700">Identificador (Login / Matrícula / CPF):</label><input type="text" id="u-identificador" required placeholder="Ex: 8.628.454-1 ou 045..." class="mt-1 block w-full border border-gray-300 rounded p-2.5"></div>
+                            <div><label class="block text-sm font-semibold text-gray-700">Identificador (Login / Matrícula / CPF):</label><input type="text" id="u-identificador" required placeholder="Ex: 8.628.454-1" class="mt-1 block w-full border border-gray-300 rounded p-2.5"></div>
                             <div><label class="block text-sm font-semibold text-gray-700">Senha Inicial:</label><input type="text" id="u-senha" required value="correios2026" class="mt-1 block w-full border border-gray-300 rounded p-2.5"></div>
                         </div>
                         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -212,6 +217,24 @@
                         </div>
                         <button type="submit" class="bg-[#FFCC00] text-[#002F6C] font-bold px-6 py-2.5 rounded shadow cursor-pointer">Cadastrar Usuário no Sistema</button>
                     </form>
+                </div>
+
+                <!-- Tabela de Listagem, Alteração de Senha e Exclusão de Usuários -->
+                <div class="bg-white p-6 rounded-lg shadow-md border border-gray-200">
+                    <h2 class="text-xl font-bold mb-4 text-[#002F6C] border-b pb-2">👥 Usuários Cadastrados no Sistema</h2>
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-200 border">
+                            <thead class="bg-[#002F6C] text-white">
+                                <tr>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold uppercase">Nome</th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold uppercase">Identificador / Matrícula</th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold uppercase">Perfil</th>
+                                    <th class="px-4 py-3 text-center text-xs font-semibold uppercase">Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tabela-usuarios-cadastrados" class="bg-white divide-y divide-gray-200 text-sm"></tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
 
@@ -264,6 +287,7 @@
     </div>
 
     <script>
+        // Variáveis globais para armazenar o estado da aplicação no front-end
         let usuarioLogado = null;
         let rotasGlobais = [];
         let veiculosGlobais = [];
@@ -273,11 +297,18 @@
         let usuariosGlobais = [];
         let mapaInstancia = null;
 
+        /**
+         * Função de escape de strings para evitar falhas de XSS e quebras em atributos HTML.
+         */
         function esc(str) {
             if (!str) return '';
             return String(str).replace(/'/g, "&#39;").replace(/"/g, '&quot;');
         }
 
+        /**
+         * Realiza a autenticação do usuário consultando a API, validando identificadores (Login, Matrícula, CPF)
+         * e salvando a sessão no localStorage.
+         */
         async function fazerLogin() {
             const ident = document.getElementById('login-id').value.trim().toLowerCase();
             const senha = document.getElementById('login-senha').value;
@@ -311,6 +342,9 @@
             }
         }
 
+        /**
+         * Verifica se existe uma sessão salva anteriormente no localStorage ao carregar a página.
+         */
         function verificarSessaoSalva() {
             const salvo = localStorage.getItem('correios_usuario');
             if (salvo) {
@@ -323,6 +357,9 @@
             }
         }
 
+        /**
+         * Encerra a sessão atual, limpa os dados locais e retorna para a tela de login.
+         */
         function fazerLogout() {
             localStorage.removeItem('correios_usuario');
             usuarioLogado = null;
@@ -330,6 +367,9 @@
             document.getElementById('app-container').classList.add('hidden');
         }
 
+        /**
+         * Inicializa o painel principal após um login bem-sucedido.
+         */
         async function inicializarSistema() {
             document.getElementById('auth-container').classList.add('hidden');
             document.getElementById('app-container').classList.remove('hidden');
@@ -341,6 +381,9 @@
             mudarAba('tab-viagem');
         }
 
+        /**
+         * Monta dinamicamente as abas de navegação de acordo com o nível de permissão (papel) do usuário.
+         */
         function configurarMenuPorPerfil() {
             const menu = document.getElementById('menu-abas');
             let html = '<button onclick="mudarAba(&#39;tab-viagem&#39;)" class="tab-btn bg-[#002F6C] text-white px-4 py-2 rounded font-bold text-sm cursor-pointer">Executar / Lançar Viagem</button>';
@@ -360,6 +403,9 @@
             menu.innerHTML = html;
         }
 
+        /**
+         * Controla a alternância visual entre as diferentes abas do painel operacional.
+         */
         function mudarAba(abaId) {
             document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
             document.querySelectorAll('.tab-btn').forEach(el => { el.classList.remove('bg-[#002F6C]', 'text-white'); el.classList.add('bg-white', 'text-gray-700', 'border'); });
@@ -375,8 +421,12 @@
             if(abaId === 'tab-viagem') carregarDadosIniciais();
             if(abaId === 'tab-mapa') setTimeout(inicializarMapa, 200);
             if(abaId === 'tab-alertas') carregarAlertas();
+            if(abaId === 'tab-usuarios') carregarTabelaUsuarios();
         }
 
+        /**
+         * Busca do back-end todas as entidades auxiliares (veículos, motoristas, rotas, atribuições, usuários).
+         */
         async function carregarDadosIniciais() {
             veiculosGlobais = await (await fetch('/api/veiculos')).json();
             motoristasGlobais = await (await fetch('/api/motoristas')).json();
@@ -411,6 +461,9 @@
             }
         }
 
+        /**
+         * Cadastra um novo usuário no sistema através da API.
+         */
         async function cadastrarUsuarioSistema(e) {
             e.preventDefault();
             const novo = {
@@ -429,8 +482,69 @@
             });
             alert('Usuário cadastrado com sucesso!');
             e.target.reset();
+            carregarTabelaUsuarios();
         }
 
+        /**
+         * Renderiza a tabela de usuários cadastrados na Aba de Gestão de Usuários,
+         * exibindo botões de alteração de senha e exclusão (protegendo o admin master).
+         */
+        async function carregarTabelaUsuarios() {
+            const res = await fetch('/api/usuarios');
+            usuariosGlobais = await res.json();
+            const tbody = document.getElementById('tabela-usuarios-cadastrados');
+            if (!tbody) return;
+
+            if (usuariosGlobais.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="4" class="text-center p-4">Nenhum usuário cadastrado.</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = usuariosGlobais.map(u =>
+                '<tr class="border-t">' +
+                    '<td class="p-3 font-semibold">' + esc(u.nome) + '</td>' +
+                    '<td class="p-3">' + esc(u.identificador || u.matricula || '-') + '</td>' +
+                    '<td class="p-3"><span class="bg-gray-200 text-gray-800 px-2 py-0.5 rounded text-xs font-bold uppercase">' + esc(u.papel) + '</span></td>' +
+                    '<td class="p-3 text-center space-x-1">' +
+                        '<button onclick="alterarSenhaUsuario(\'' + u.id + '\')" class="bg-blue-600 text-white font-bold px-2.5 py-1 rounded shadow text-xs cursor-pointer">🔑 Mudar Senha</button>' +
+                        (u.identificador !== 'jpkardozo' ? '<button onclick="excluirUsuario(\'' + u.id + '\')" class="bg-red-600 text-white font-bold px-2.5 py-1 rounded shadow text-xs cursor-pointer">Excluir</button>' : '') +
+                    '</td>' +
+                '</tr>'
+            ).join('');
+        }
+
+        /**
+         * Permite ao administrador alterar a senha de um usuário específico via prompt.
+         */
+        async function alterarSenhaUsuario(id) {
+            const u = usuariosGlobais.find(x => x.id == id);
+            if (!u) return;
+            const novaSenha = prompt('Digite a nova senha para o usuário ' + u.nome + ':');
+            if (!novaSenha) return;
+
+            u.senha = novaSenha;
+            await fetch('/api/usuarios/' + id, {
+                method: 'PUT',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(u)
+            });
+            alert('Senha alterada com sucesso!');
+            carregarTabelaUsuarios();
+        }
+
+        /**
+         * Exclui um usuário do sistema após confirmação.
+         */
+        async function excluirUsuario(id) {
+            if (confirm('Deseja realmente excluir este usuário do sistema?')) {
+                await fetch('/api/usuarios/' + id, { method: 'DELETE' });
+                carregarTabelaUsuarios();
+            }
+        }
+
+        /**
+         * Cadastra um novo motorista.
+         */
         async function salvarMotorista(e) {
             e.preventDefault();
             await fetch('/api/motoristas', {
@@ -446,22 +560,34 @@
             alert('Motorista salvo!'); carregarDadosIniciais(); e.target.reset();
         }
 
+        /**
+         * Cadastra um novo veículo.
+         */
         async function salvarVeiculo(e) {
             e.preventDefault();
             await fetch('/api/veiculos', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({modelo: document.getElementById('cad-modelo').value, placa: document.getElementById('cad-placa').value})});
             alert('Veículo salvo!'); carregarDadosIniciais(); e.target.reset();
         }
 
+        /**
+         * Cria uma atribuição vinculando motorista, veículo e rota.
+         */
         async function salvarAtribuicao(e) {
             e.preventDefault();
             await fetch('/api/atribuicoes', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ motoristaId: document.getElementById('atrib-motorista').value, veiculoId: document.getElementById('atrib-veiculo').value, rotaId: document.getElementById('atrib-rota').value }) });
             alert('Atribuição salva!');
         }
 
+        /**
+         * Adiciona dinamicamente campos para paradas intermediárias no cadastro de rotas.
+         */
         function adicionarParadaRota() {
             document.getElementById('lista-paradas-rota').insertAdjacentHTML('beforeend', '<div class="flex gap-2 parada-rota-item mb-2"><input type="text" name="localParada" placeholder="Local da Parada" class="flex-1 border p-1 rounded"><button type="button" onclick="this.parentElement.remove()" class="text-red-600 font-bold px-2 cursor-pointer">X</button></div>');
         }
 
+        /**
+         * Salva uma nova rota com suas paradas planejadas.
+         */
         async function salvarRota(e) {
             e.preventDefault();
             const paradas = Array.from(document.querySelectorAll('.parada-rota-item input')).map(i => i.value);
@@ -469,6 +595,9 @@
             alert('Rota salva com sucesso!'); e.target.reset(); carregarDadosIniciais();
         }
 
+        /**
+         * Carrega a estrutura ponto a ponto da rota selecionada para preenchimento na execução da viagem.
+         */
         function carregarEstruturaRota(paradasExistentes = []) {
             const rotaId = document.getElementById('v-rota').value;
             const container = document.getElementById('container-paradas-execucao');
@@ -490,6 +619,9 @@
             }).join('');
         }
 
+        /**
+         * Permite inserir um trecho adicional de percurso caso ocorra desvio ou parada extra.
+         */
         function adicionarTrechoExtra(btn) {
             const wrapper = btn.closest('.parada-execucao-item');
             const localPai = wrapper.getAttribute('data-local') + ' (Extra)';
@@ -506,6 +638,9 @@
             wrapper.insertAdjacentHTML('afterend', htmlExtra);
         }
 
+        /**
+         * Salva ou atualiza a execução da viagem e gera um alerta automático para a central.
+         */
         async function salvarViagem(e) {
             e.preventDefault();
             const viagemId = document.getElementById('v-viagem-id').value || Date.now();
@@ -555,6 +690,9 @@
             mudarAba('tab-relatorio');
         }
 
+        /**
+         * Carrega os dados de uma viagem existente para edição.
+         */
         async function editarViagem(id) {
             const v = viagensGlobais.find(x => x.id == id);
             if (!v) return;
@@ -573,6 +711,9 @@
             window.scrollTo({top: 0, behavior: 'smooth'});
         }
 
+        /**
+         * Exclui um registro de viagem.
+         */
         async function excluirViagem(id) {
             if (confirm('Deseja realmente excluir esta viagem e seus registros?')) {
                 await fetch('/api/viagens/' + id, { method: 'DELETE' });
@@ -580,6 +721,9 @@
             }
         }
 
+        /**
+         * Carrega o histórico de viagens e preenche a tabela de relatórios.
+         */
         async function carregarRelatorio() {
             viagensGlobais = await (await fetch('/api/viagens')).json();
             const tbody = document.getElementById('tabela-relatorio');
@@ -598,6 +742,9 @@
             ).join('');
         }
 
+        /**
+         * Carrega os alertas operacionais recentes enviados pelos motoristas.
+         */
         async function carregarAlertas() {
             const res = await fetch('/api/alertas');
             const alertas = await res.json();
@@ -613,12 +760,18 @@
             ).join('');
         }
 
+        /**
+         * Formata uma string de data para exibição de horas e minutos (HH:MM).
+         */
         function formatTime(dateStr) {
             if(!dateStr) return '';
             const d = new Date(dateStr);
             return d.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
         }
 
+        /**
+         * Calcula a diferença de tempo entre duas datas em formato HH:MM.
+         */
         function calcularDiferencaTempo(inicioStr, fimStr) {
             if (!inicioStr || !fimStr) return '00:00';
             const diffMs = new Date(fimStr) - new Date(inicioStr);
@@ -629,6 +782,9 @@
             return (hrs < 10 ? '0' + hrs : hrs) + ':' + (mins < 10 ? '0' + mins : mins);
         }
 
+        /**
+         * Gera e dispara a impressão da Ficha Oficial ENEM padronizada dos Correios.
+         */
         function imprimirFichaOficial(viagemId) {
             const v = viagensGlobais.find(x => x.id == viagemId);
             if(!v) return;
@@ -691,6 +847,9 @@
             window.print();
         }
 
+        /**
+         * Inicializa o mapa interativo Leaflet na aba correspondente.
+         */
         function inicializarMapa() {
             if (mapaInstancia) {
                 mapaInstancia.invalidateSize();
@@ -704,6 +863,9 @@
             carregarMarcadoresMapa();
         }
 
+        /**
+         * Carrega os marcadores de localização e telemetria simulada das viagens ativas no mapa.
+         */
         async function carregarMarcadoresMapa() {
             if (!mapaInstancia) return;
             const res = await fetch('/api/viagens');
@@ -737,6 +899,7 @@
             });
         }
 
+        // Executa a verificação de sessão ao carregar a janela do navegador
         window.onload = verificarSessaoSalva;
     </script>
 </body>
